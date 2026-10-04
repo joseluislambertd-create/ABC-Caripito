@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Academia de Baloncesto Caripito (ABC) | Sistema de Atletas</title>
+  <meta name="description" content="Sistema oficial de registro digital, fichas técnicas y control médico de atletas para la Academia de Baloncesto Caripito (ABC).">
+  
+  <!-- Google Fonts: Outfit & Montserrat -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- CSS Stylesheet -->
+  <link rel="stylesheet" href="css/style.css?v=8">
+  <link rel="icon" type="image/jpeg" href="assets/logo.jpg">
+</head>
+<body>
+
+  <div class="app-wrapper">
+    
+    <!-- Top Sticky Header & Navigation -->
+    <header class="header-glass">
+      <div class="brand-section">
+        <div class="brand-logo-wrap">
+          <img src="assets/logo.jpg" alt="Logo ABC Caripito" class="brand-logo-img" id="mainHeaderLogo" />
+        </div>
+        <div class="brand-info">
+          <h1>ABC Caripito</h1>
+          <div class="tagline">Academia de Baloncesto • Sistema Integral</div>
+        </div>
+      </div>
+
+      <!-- Navigation Recuadro (Bordes Blancos y Fondo Azul Oscuro) -->
+      <nav class="nav-tabs" id="mainNavTabs">
+        <button class="nav-tab-btn active" data-view="registro" id="navBtnRegistro">
+          <span>📝</span> Registro Representante
+        </button>
+        <button class="nav-tab-btn" data-view="base-datos" id="navBtnDatabase">
+          <span>📊</span> Base de Datos
+        </button>
+        <button class="nav-tab-btn" data-view="fichas-pro" id="navBtnFichasPro">
+          <span>🪪</span> Tarjeta Pro
+        </button>
+        <button class="nav-tab-btn" data-view="ficha-oficial" id="navBtnFichaOficial">
+          <span>📄</span> Ficha Oficial
+        </button>
+      </nav>
+
+      <!-- Action Quick Buttons -->
+      <div class="header-actions">
+        <div class="cloud-status-badge" id="cloudStatusBadge" title="Estado de conexión con la Base de Datos">
+          <span class="cloud-dot" id="cloudStatusDot"></span>
+          <span class="cloud-label" id="cloudStatusLabel">Modo Local</span>
+        </div>
+        <div class="rep-mode-badge" id="repModeBadge" style="display:none;">
+          <span>📝</span> Portal de Inscripción Oficial
+        </div>
+        <button class="btn-share-link" id="btnOpenShareModal">
+          <span>🔗</span> Link Representantes / QR
+        </button>
+      </div>
+    </header>
+
+    <!-- General Academy Metrics Banner: 4 Bloques con Pestaña Sobresaliente y Paleta Individual -->
+    <section class="stats-banner">
+      <!-- 1. Atletas Registrados (Verde) -->
+      <div class="stat-card stat-card-green stat-card-interactive" id="kpiCardTotal" onclick="handleKpiClick('total')" title="Haz clic para ver todos los atletas y resetear filtros" role="button" tabindex="0">
+        <div class="stat-badge-tab badge-tab-green" id="statTotalAthletes">8</div>
+        <div class="stat-content">
+          <div class="stat-title title-green">Atletas Registrados</div>
+          <div class="stat-hint">👁️ MOSTRAR TODOS</div>
+        </div>
+        <div class="stat-pictogram-wrap icon-wrap-green" title="Atletas Registrados">
+          <svg class="stat-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+            <circle cx="9" cy="7" r="4"></circle>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+          </svg>
+        </div>
+      </div>
+
+      <!-- 2. Atletas Activos (Azul) -->
+      <div class="stat-card stat-card-blue stat-card-interactive" id="kpiCardActive" onclick="handleKpiClick('active')" title="Haz clic para filtrar solo atletas con estatus ACTIVO" role="button" tabindex="0">
+        <div class="stat-badge-tab badge-tab-blue" id="statActiveAthletes">8</div>
+        <div class="stat-content">
+          <div class="stat-title title-blue">Atletas Activos</div>
+          <div class="stat-hint">⚡ FILTRAR ACTIVOS</div>
+        </div>
+        <div class="stat-pictogram-wrap icon-wrap-blue" title="Atletas Activos">
+          <svg class="stat-svg" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+          </svg>
+        </div>
+      </div>
+
+      <!-- 3. Alertas Médicas (Rojo / Naranja) -->
+      <div class="stat-card stat-card-orange stat-card-interactive" id="kpiCardHealth" onclick="handleKpiClick('health')" title="Haz clic para filtrar atletas con alertas médicas o alergias" role="button" tabindex="0">
+        <div class="stat-badge-tab badge-tab-orange" id="statHealthAlerts">4</div>
+        <div class="stat-content">
+          <div class="stat-title title-orange">Alertas Médicas</div>
+          <div class="stat-hint">⚠️ FILTRAR ALERTAS</div>
+        </div>
+        <div class="stat-pictogram-wrap icon-wrap-orange" title="Alertas Médicas">
+          <svg class="stat-svg-cross" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" fill="#fee2e2" stroke="#dc2626" stroke-width="1.5" />
+            <path d="M12 7v10M7 12h10" stroke="#dc2626" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </div>
+      </div>
+
+      <!-- 4. Estatura Promedio (Morado / Púrpura) -->
+      <div class="stat-card stat-card-purple stat-card-interactive" id="kpiCardHeight" onclick="handleKpiClick('height')" title="Haz clic para ver el desglose estadístico de estatura" role="button" tabindex="0">
+        <div class="stat-badge-tab stat-badge-tab-text badge-tab-purple" id="statAvgHeight">1,71 m</div>
+        <div class="stat-content">
+          <div class="stat-title title-purple">Estatura Promedio</div>
+          <div class="stat-hint">📐 VER DESGLOSE</div>
+        </div>
+        <div class="stat-pictogram-wrap icon-wrap-purple" title="Estatura Promedio">
+          <svg class="stat-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21.3 8.7 8.7 21.3a1 1 0 0 1-1.4 0l-4.6-4.6a1 1 0 0 1 0-1.4L15.3 2.7a1 1 0 0 1 1.4 0l4.6 4.6a1 1 0 0 1 0 1.4z"></path>
+            <line x1="14.5" y1="5.5" x2="12.5" y2="7.5"></line>
+            <line x1="11.5" y1="8.5" x2="8.5" y2="11.5"></line>
+            <line x1="8.5" y1="11.5" x2="6.5" y2="13.5"></line>
+            <line x1="5.5" y1="14.5" x2="2.5" y2="17.5"></line>
+          </svg>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         VISTA 1: FORMULARIO DE REGISTRO PARA REPRESENTANTES (PORTAL WEB)
+         ====================================================================== -->
+    <section class="view-container active" id="view-registro">
+      <div class="register-layout">
+        
+        <!-- Registration Form Panel -->
+        <div class="form-panel-glass">
+          <div class="form-header-badge">🏀 Portal de Inscripción Oficial</div>
+          <h2 class="form-title">Planilla de Registro del Atleta</h2>
+          <p class="form-subtitle">
+            Estimado Representante, por favor complete el siguiente formulario con los datos exactos del atleta. Al enviar, la ficha técnica se generará y sincronizará de forma instantánea.
+          </p>
+
+          <form id="athleteRegisterForm">
+            
+            <!-- SECCIÓN 1: FOTO DEL ATLETA -->
+            <div class="form-section-divider orange">
+              <span class="section-icon">📷</span>
+              <h3>1. Fotografía Tipo Carnet del Atleta</h3>
+            </div>
+
+            <div class="photo-uploader-box" id="photoDropBox">
+              <input type="file" id="regFotoInput" accept="image/*" />
+              <img id="regPhotoThumb" class="photo-preview-thumbnail" style="display:none;" alt="Foto Atleta" />
+              <div class="uploader-icon">📷</div>
+              <div class="uploader-text">
+                <strong>Haga clic o arrastre la foto del atleta aquí</strong>
+                <p>Formato JPG o PNG • Se recomienda foto clara con fondo neutro o uniforme</p>
+              </div>
+            </div>
+
+            <!-- SECCIÓN 2: DATOS PERSONALES DEL ATLETA -->
+            <div class="form-section-divider">
+              <span class="section-icon">👤</span>
+              <h3>2. Datos Personales del Atleta</h3>
+            </div>
+
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label" for="regNombres">Nombres <span class="required">*</span></label>
+                <input type="text" id="regNombres" class="form-input" placeholder="Ej. Carlos Eduardo" required />
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="regApellidos">Apellidos <span class="required">*</span></label>
+                <input type="text" id="regApellidos" class="form-input" placeholder="Ej. Mendoza Pérez" required />
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="regCedula">Cédula de Identidad / Doc <span class="required">*</span></label>
+                <input type="text" id="regCedula" class="form-input" placeholder="Ej. V-30.123.456" required />
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="regFechaNac">
+                  Fecha de Nacimiento <span class="required">*</span>
+                  <span class="calc-badge" id="regEdadCalculada">-- años</span>
+                </label>
+                <input type="date" id="regFechaNac" class="form-input" required />
+              </div>
+            </div>
+
+            <!-- SECCIÓN 3: PERFIL FÍSICO Y DEPORTIVO -->
+            <div class="form-section-divider orange">
+              <span class="section-icon">⚡</span>
+              <h3>3. Perfil Físico y Baloncesto</h3>
+            </div>
+
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label" for="regEstatura">Estatura en Metros <span class="required">*</span></label>
+                <input type="number" step="0.01" min="1.00" max="2.40" id="regEstatura" class="form-input" placeholder="Ej. 1.75" required />
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="regPeso">
+                  Peso en Kilogramos (kg) <span class="required">*</span>
+                  <span class="calc-badge" id="regImcCalculado">IMC: --</span>
+                </label>
+                <input type="number" step="0.1" min="20" max="160" id="regPeso" class="form-input" placeholder="Ej. 68.5" required />
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="regCategoria">Categoría</label>
+                <select id="regCategoria" class="form-select">
+                  <option value="U-10">U-10 (Menores de 10 años)</option>
+                  <option value="U-12">U-12 (Menores de 12 años)</option>
+                  <option value="U-14">U-14 (Menores de 14 años)</option>
+                  <option value="U-16">U-16 (Menores de 16 años)</option>
+                  <option value="U-18" selected>U-18 (Juvenil)</option>
+                  <option value="U-21">U-21 (Sub-21)</option>
+                  <option value="Libre">Categoría Libre</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="regPosicion">Posición en Cancha</label>
+                <select id="regPosicion" class="form-select">
+                  <option value="Base / Armador">Base / Armador (Point Guard)</option>
+                  <option value="Escolta">Escolta (Shooting Guard)</option>
+                  <option value="Alero">Alero (Small Forward)</option>
+                  <option value="Ala-Pívot">Ala-Pívot (Power Forward)</option>
+                  <option value="Pívot">Pívot (Center)</option>
+                  <option value="Formativo">Formativo / Polivalente</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="regDorsal">Número de Dorsal / Camiseta</label>
+                <input type="text" id="regDorsal" class="form-input" placeholder="Ej. 7, 23, 11 (Opcional)" />
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="regTipoSangre">Tipo de Sangre</label>
+                <select id="regTipoSangre" class="form-select">
+                  <option value="O+">O Positivo (O+)</option>
+                  <option value="O-">O Negativo (O-)</option>
+                  <option value="A+">A Positivo (A+)</option>
+                  <option value="A-">A Negativo (A-)</option>
+                  <option value="B+">B Positivo (B+)</option>
+                  <option value="B-">B Negativo (B-)</option>
+                  <option value="AB+">AB Positivo (AB+)</option>
+                  <option value="AB-">AB Negativo (AB-)</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- SECCIÓN 4: SITUACIÓN DE SALUD Y ALERGIAS -->
+            <div class="form-section-divider">
+              <span class="section-icon">🩺</span>
+              <h3>4. Historial Médico y Condiciones de Salud</h3>
+            </div>
+
+            <div class="form-group full-width">
+              <label class="form-label" for="regSalud">
+                Situación de Salud, Alergias, Lesiones o Tratamientos Actuales <span class="required">*</span>
+              </label>
+              <textarea id="regSalud" class="form-textarea" placeholder="Indique si el atleta padece de alguna alergia (penicilina, etc.), asma, lesiones previas o si no tiene ninguna condición médica coloque 'Sin novedades médicas'." required></textarea>
+            </div>
+
+            <!-- SECCIÓN 5: DATOS DEL REPRESENTANTE LEGAL -->
+            <div class="form-section-divider orange">
+              <span class="section-icon">👨‍👩‍👧</span>
+              <h3>5. Datos del Representante y Contactos de Emergencia</h3>
+            </div>
+
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label" for="regRepresentante">Nombre y Apellido del Representante <span class="required">*</span></label>
+                <input type="text" id="regRepresentante" class="form-input" placeholder="Ej. Roberto Mendoza" required />
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="regParentesco">Parentesco con el Atleta <span class="required">*</span></label>
+                <select id="regParentesco" class="form-select">
+                  <option value="Padre">Padre</option>
+                  <option value="Madre">Madre</option>
+                  <option value="Tutor Legal">Tutor Legal</option>
+                  <option value="Abuelo/a">Abuelo/a</option>
+                  <option value="Tío/a">Tío/a</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="regTelefonoRep">Teléfono Principal / WhatsApp <span class="required">*</span></label>
+                <input type="tel" id="regTelefonoRep" class="form-input" placeholder="Ej. 0414-1234567" required />
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="regTelefonoEmergencia">Teléfono de Emergencia Secundario</label>
+                <input type="tel" id="regTelefonoEmergencia" class="form-input" placeholder="Ej. 0424-7654321" />
+              </div>
+
+              <div class="form-group full-width">
+                <label class="form-label" for="regDireccion">Dirección / Sector de Residencia</label>
+                <input type="text" id="regDireccion" class="form-input" placeholder="Ej. Sector Centro, Calle Sucre, Caripito" />
+              </div>
+            </div>
+
+            <button type="submit" class="btn-submit-register" id="btnSubmitForm">
+              <span>🚀</span> Registrar Atleta y Generar Ficha Automática
+            </button>
+          </form>
+        </div>
+
+        <!-- Live Preview Athlete Card Column -->
+        <div class="preview-sticky">
+          <div class="preview-title">
+            <span>👁️</span> Vista Previa en Vivo de la Ficha
+          </div>
+
+          <div class="athlete-pro-card" id="liveAthleteCard">
+            <div class="card-banner">
+              <div class="card-banner-brand">
+                <img src="assets/logo.jpg" class="card-banner-logo" alt="Logo ABC" />
+                <span class="card-banner-text">ABC CARIPITO</span>
+              </div>
+              <span class="card-id-badge" id="previewAthleteId">ATL-NUEVO</span>
+            </div>
+
+            <div class="card-main-body">
+              <div class="athlete-avatar-wrapper">
+                <img src="https://images.unsplash.com/photo-1546519638-68e109498ffc?w=400&auto=format&fit=crop&q=80" class="athlete-avatar-img" id="previewAthleteAvatar" alt="Avatar" />
+                <div class="athlete-dorsal-tag" id="previewAthleteDorsal">🏀</div>
+              </div>
+
+              <h3 class="athlete-name" id="previewAthleteName">Nombre del Atleta</h3>
+              <span class="athlete-position-tag" id="previewAthletePos">Base / Armador</span>
+
+              <div class="stats-grid-compact">
+                <div class="stat-box-mini">
+                  <span class="val" id="previewAthleteHeight">--m</span>
+                  <span class="lbl">Estatura</span>
+                </div>
+                <div class="stat-box-mini">
+                  <span class="val" id="previewAthleteWeight">--kg</span>
+                  <span class="lbl">Peso</span>
+                </div>
+                <div class="stat-box-mini">
+                  <span class="val" id="previewAthleteIMC">--</span>
+                  <span class="lbl">IMC</span>
+                </div>
+              </div>
+
+              <div class="medical-alert-box safe" id="previewMedAlertBox">
+                <span class="med-icon">🩺</span>
+                <div class="med-info">
+                  <h5>Condición de Salud</h5>
+                  <p id="previewMedText">Sin novedades médicas registradas</p>
+                </div>
+              </div>
+
+              <div class="card-rep-footer">
+                <div class="rep-summary">
+                  <div class="rep-role" id="previewRepRole">Representante:</div>
+                  <div class="rep-name" id="previewRepName">Nombre Representante</div>
+                </div>
+                <div class="contact-quick-btns">
+                  <span class="btn-quick-call">📞</span>
+                  <span class="btn-quick-wa">💬</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style="margin-top:1rem;padding:1rem;background:rgba(0,210,255,0.08);border:1px solid rgba(0,210,255,0.2);border-radius:12px;font-size:0.85rem;color:var(--abc-silver-muted);line-height:1.4;">
+            💡 <strong>Actualización en tiempo real:</strong> Cada cambio introducido en el formulario se refleja inmediatamente en esta tarjeta digital.
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         VISTA 2: BASE DE DATOS GENERAL & TABLA INTERACTIVA
+         ====================================================================== -->
+    <section class="view-container" id="view-base-datos">
+      
+      <!-- Toolbar -->
+      <div class="table-toolbar">
+        <div class="search-box-wrap">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="tableSearchInput" class="search-input" placeholder="Buscar por Nombre, Cédula, ID, Representante..." />
+        </div>
+
+        <div class="toolbar-actions">
+          <select id="filterCategory" class="filter-select" title="Filtrar por Categoría">
+            <option value="all">Todas las Categorías</option>
+            <option value="U-10">U-10</option>
+            <option value="U-12">U-12</option>
+            <option value="U-14">U-14</option>
+            <option value="U-16">U-16</option>
+            <option value="U-18">U-18</option>
+            <option value="U-21">U-21</option>
+            <option value="Libre">Libre</option>
+          </select>
+
+          <select id="filterStatus" class="filter-select" title="Filtrar por Estatus">
+            <option value="all">Todos los Estatus</option>
+            <option value="Activo">Solo Activos</option>
+            <option value="En Evaluación">En Evaluación</option>
+            <option value="Lesionado">Lesionado</option>
+            <option value="Inactivo">Inactivo</option>
+          </select>
+
+          <select id="filterHealth" class="filter-select" title="Filtrar por Condición Médica">
+            <option value="all">Todo el Estado de Salud</option>
+            <option value="alert">⚠️ Con Alerta Médica</option>
+            <option value="clean">✓ Sin Novedades</option>
+          </select>
+
+          <button class="btn-action-outline" id="btnResetFilters" onclick="resetAllFilters()" title="Limpiar todos los filtros" style="display:none;">
+            <span>🔄</span> Limpiar Filtros
+          </button>
+
+          <button class="btn-action-outline" onclick="exportDatabaseToExcel()">
+            <span>📥</span> Exportar Excel (CSV)
+          </button>
+
+          <button class="btn-action-primary" onclick="switchView('registro')">
+            <span>➕</span> Nuevo Atleta
+          </button>
+        </div>
+      </div>
+
+      <!-- Table Container -->
+      <div class="table-glass-container">
+        <div class="table-responsive">
+          <table class="athletes-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Atleta</th>
+                <th>Categoría</th>
+                <th>Físico (Est / Peso)</th>
+                <th>IMC</th>
+                <th>Condición Médica</th>
+                <th>Representante</th>
+                <th>Estatus</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="athletesTableBody">
+              <!-- Dynamically rendered -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ======================================================================
+         VISTA 3: TARJETAS PRO (TRADING CARDS GRID)
+         ====================================================================== -->
+    <section class="view-container" id="view-fichas-pro">
+      <div class="table-toolbar">
+        <div style="font-size: 1.1rem; font-weight: 800; color: #fff;">
+          🏀 Catálogo de Tarjetas Deportivas Digitales ABC
+        </div>
+        <div>
+          <button class="btn-action-outline" onclick="window.print()">
+            <span>🖨️</span> Imprimir Todas las Tarjetas
+          </button>
+        </div>
+      </div>
+
+      <div class="cards-grid-layout" id="cardsGridLayout">
+        <!-- Dynamically rendered -->
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         VISTA 4: FICHA TÉCNICA E INDIVIDUAL OFICIAL (TIPO EXCEL PRO)
+         ====================================================================== -->
+    <section class="view-container" id="view-ficha-oficial">
+      
+      <!-- Ficha Selector Bar -->
+      <div class="ficha-selector-bar">
+        <div class="ficha-selector-group">
+          <span style="font-weight:700;color:var(--abc-cyan-bright);font-size:0.9rem;">Seleccionar Atleta:</span>
+          <select id="fichaAthleteSelect" class="ficha-select">
+            <!-- Dynamically populated -->
+          </select>
+        </div>
+
+        <div style="display:flex;gap:0.75rem;">
+          <button class="btn-action-primary" onclick="printCurrentFicha()">
+            <span>🖨️</span> Imprimir Ficha / Guardar PDF
+          </button>
+        </div>
+      </div>
+
+      <!-- Ficha Document Official Paper Container -->
+      <div class="ficha-paper-wrapper" id="fichaPaperWrapper">
+        <div id="fichaOfficialContainer" style="width:100%;">
+          <!-- Dynamically rendered -->
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <!-- ========================================================================
+       MODAL DE EXITO EN EL REGISTRO
+       ======================================================================== -->
+  <div class="modal-overlay" id="modalSuccess">
+    <div class="modal-card">
+      <button class="btn-modal-close" onclick="closeAllModals()">&times;</button>
+      <div class="modal-success-icon">✓</div>
+      <h3 class="modal-title">¡Registro Completado!</h3>
+      <p class="modal-desc">
+        El atleta <strong id="successAthleteName" style="color:#fff;">Nombre</strong> ha sido registrado exitosamente en la academia con el código <strong id="successAthleteId" style="color:var(--abc-cyan-bright);">ATL-000</strong>.
+      </p>
+
+      <div class="modal-btn-group">
+        <a href="#" target="_blank" id="btnSuccessWhatsApp" class="btn-modal-wa">
+          <span>💬</span> Enviar Comprobante por WhatsApp
+        </a>
+        <button class="btn-modal-primary" id="btnSuccessNewRegister" onclick="closeAllModals(); resetRegisterForm();" style="display:none;width:100%;justify-content:center;">
+          <span>➕</span> Inscribir a Otro Atleta
+        </button>
+        <button class="btn-modal-primary" id="btnSuccessViewFicha" onclick="closeAllModals(); switchView('ficha-oficial');">
+          <span>📄</span> Ver Ficha Técnica Oficial
+        </button>
+        <button class="btn-action-outline" id="btnSuccessViewDatabase" onclick="closeAllModals(); switchView('base-datos');" style="width:100%;justify-content:center;">
+          Ir a la Base de Datos General
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       MODAL PARA COMPARTIR LINK Y CODIGO QR CON REPRESENTANTES
+       ======================================================================== -->
+  <div class="modal-overlay" id="modalShare">
+    <div class="modal-card">
+      <button class="btn-modal-close" onclick="closeAllModals()">&times;</button>
+      <h3 class="modal-title">Enlace de Registro Móvil</h3>
+      <p class="modal-desc">
+        Escanea este código QR o comparte el enlace para que los representantes completen la planilla directamente desde su teléfono móvil.
+      </p>
+
+      <div class="qr-display-box" id="qrCodeContainer">
+        <!-- QR Code Image rendered here -->
+      </div>
+
+      <!-- Wi-Fi / LAN Network Indicator -->
+      <div id="shareWifiHint" style="background:rgba(37,99,235,0.12);border:1px solid rgba(96,165,250,0.35);border-radius:10px;padding:0.75rem 0.9rem;font-size:0.8rem;color:#e2e8f0;margin-bottom:1rem;line-height:1.4;text-align:left;">
+      </div>
+
+      <div class="link-copy-group">
+        <input type="text" id="shareLinkInput" placeholder="http://..." title="Puedes editar o ingresar la IP de tu red Wi-Fi" />
+        <button id="btnCopyShareLink">Copiar Link</button>
+      </div>
+
+      <div style="display:flex;gap:0.5rem;justify-content:center;flex-wrap:wrap;">
+        <button class="btn-action-outline" onclick="window.print()" style="font-size:0.85rem;width:100%;justify-content:center;">
+          <span>🖨️</span> Imprimir Código QR para Cancha
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       MODAL PARA EDITAR DATOS DEL ATLETA
+       ======================================================================== -->
+  <div class="modal-overlay" id="modalEditAthlete">
+    <div class="modal-card modal-card-large">
+      <button class="btn-modal-close" onclick="closeAllModals()">&times;</button>
+      <div class="modal-header-styled">
+        <div class="modal-header-icon-wrap edit-icon-bg">✏️</div>
+        <div>
+          <h3 class="modal-title" id="editModalTitle">Editar Datos del Atleta</h3>
+          <p class="modal-desc" style="margin-bottom:0;" id="editModalSubtitle">Modifique la información técnica, física, dorsal, condición de salud o representante.</p>
+        </div>
+      </div>
+
+      <form id="editAthleteForm" class="edit-form-content">
+        <input type="hidden" id="editAthleteId" />
+
+        <div class="edit-form-grid">
+          <!-- Datos Básicos -->
+          <div class="edit-form-group">
+            <label class="form-label" for="editNombres">Nombres <span class="required">*</span></label>
+            <input type="text" id="editNombres" class="form-input" required />
+          </div>
+
+          <div class="edit-form-group">
+            <label class="form-label" for="editApellidos">Apellidos <span class="required">*</span></label>
+            <input type="text" id="editApellidos" class="form-input" required />
+          </div>
+
+          <div class="edit-form-group">
+            <label class="form-label" for="editCedula">Cédula / Documento <span class="required">*</span></label>
+            <input type="text" id="editCedula" class="form-input" required />
+          </div>
+
+          <div class="edit-form-group">
+            <label class="form-label" for="editFechaNac">Fecha de Nacimiento</label>
+            <input type="date" id="editFechaNac" class="form-input" />
+          </div>
+
+          <div class="edit-form-group">
+            <label class="form-label" for="editEdad">
+              Edad (Años) <span class="calc-badge" id="editEdadCalculada">--</span>
+            </label>
+            <input type="number" id="editEdad" class="form-input" min="4" max="35" required />
+          </div>
+
+          <div class="edit-form-group">
+            <label class="form-label" for="editDorsal">Número de Dorsal / Camiseta</label>
+            <input type="text" id="editDorsal" class="form-input" placeholder="Ej. 7, 23, 11" />
+          </div>
+
+          <!-- Datos Físicos -->
+          <div class="edit-form-group">
+            <label class="form-label" for="editEstatura">Estatura en Metros (m) <span class="required">*</span></label>
+            <input type="number" step="0.01" min="1.00" max="2.40" id="editEstatura" class="form-input" placeholder="Ej. 1.75" required />
+          </div>
+
+          <div class="edit-form-group">
+            <label class="form-label" for="editPeso">
+              Peso en Kilogramos (kg) <span class="required">*</span>
+              <span class="calc-badge" id="editImcCalculado">IMC: --</span>
+            </label>
+            <input type="number" step="0.1" min="20" max="160" id="editPeso" class="form-input" placeholder="Ej. 68.5" required />
+          </div>
+
+          <div class="edit-form-group">
+            <label class="form-label" for="editCategoria">Categoría</label>
+            <select id="editCategoria" class="form-select">
+              <option value="U-10">U-10</option>
+              <option value="U-12">U-12</option>
+              <option value="U-14">U-14</option>
+              <option value="U-16">U-16</option>
+              <option value="U-18">U-18</option>
+              <option value="U-21">U-21</option>
+              <option value="Libre">Libre</option>
+            </select>
+          </div>
+
+          <div class="edit-form-group">
+            <label class="form-label" for="editPosicion">Posición en Cancha</label>
+            <select id="editPosicion" class="form-select">
+              <option value="Base / Armador">Base / Armador (Point Guard)</option>
+              <option value="Escolta">Escolta (Shooting Guard)</option>
+              <option value="Alero">Alero (Small Forward)</option>
+              <option value="Ala-Pívot">Ala-Pívot (Power Forward)</option>
+              <option value="Pívot">Pívot (Center)</option>
+              <option value="Formativo">Formativo / Polivalente</option>
+            </select>
+          </div>
+
+          <div class="edit-form-group">
+            <label class="form-label" for="editTipoSangre">Tipo de Sangre</label>
+            <select id="editTipoSangre" class="form-select">
+              <option value="O+">O Positivo (O+)</option>
+              <option value="O-">O Negativo (O-)</option>
+              <option value="A+">A Positivo (A+)</option>
+              <option value="A-">A Negativo (A-)</option>
+              <option value="B+">B Positivo (B+)</option>
+              <option value="B-">B Negativo (B-)</option>
+              <option value="AB+">AB Positivo (AB+)</option>
+              <option value="AB-">AB Negativo (AB-)</option>
+            </select>
+          </div>
+
+          <div class="edit-form-group">
+            <label class="form-label" for="editEstatus">Estatus en Academia <span class="required">*</span></label>
+            <select id="editEstatus" class="form-select">
+              <option value="Activo">Activo</option>
+              <option value="En Evaluación">En Evaluación</option>
+              <option value="Lesionado">Lesionado / Recuperación</option>
+              <option value="Inactivo">Inactivo</option>
+            </select>
+          </div>
+
+          <!-- Salud -->
+          <div class="edit-form-group full-width">
+            <label class="form-label" for="editSalud">
+              Condición de Salud / Alergias / Observaciones Médicas <span class="required">*</span>
+            </label>
+            <textarea id="editSalud" class="form-textarea" style="min-height:75px;" required></textarea>
+          </div>
+
+          <!-- Representante -->
+          <div class="edit-form-group">
+            <label class="form-label" for="editRepresentante">Nombre del Representante <span class="required">*</span></label>
+            <input type="text" id="editRepresentante" class="form-input" required />
+          </div>
+
+          <div class="edit-form-group">
+            <label class="form-label" for="editParentesco">Parentesco <span class="required">*</span></label>
+            <select id="editParentesco" class="form-select">
+              <option value="Padre">Padre</option>
+              <option value="Madre">Madre</option>
+              <option value="Tutor Legal">Tutor Legal</option>
+              <option value="Abuelo/a">Abuelo/a</option>
+              <option value="Tío/a">Tío/a</option>
+            </select>
+          </div>
+
+          <div class="edit-form-group">
+            <label class="form-label" for="editTelefonoRep">Teléfono Representante / WhatsApp <span class="required">*</span></label>
+            <input type="tel" id="editTelefonoRep" class="form-input" required />
+          </div>
+
+          <div class="edit-form-group">
+            <label class="form-label" for="editTelefonoEmergencia">Teléfono Emergencia Secundario</label>
+            <input type="tel" id="editTelefonoEmergencia" class="form-input" />
+          </div>
+
+          <div class="edit-form-group full-width">
+            <label class="form-label" for="editDireccion">Dirección / Sector de Residencia</label>
+            <input type="text" id="editDireccion" class="form-input" />
+          </div>
+        </div>
+
+        <div class="edit-modal-actions">
+          <button type="button" class="btn-action-outline" onclick="closeAllModals()">
+            Cancelar
+          </button>
+          <button type="submit" class="btn-action-primary" style="padding:0.75rem 1.75rem;">
+            <span>💾</span> Guardar Cambios
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       MODAL PARA DESGLOSE DETALLADO DE ESTATURA (KPI 4)
+       ======================================================================== -->
+  <div class="modal-overlay" id="modalHeightBreakdown">
+    <div class="modal-card modal-card-large">
+      <button class="btn-modal-close" onclick="closeAllModals()">&times;</button>
+      <div class="modal-header-styled">
+        <div class="modal-header-icon-wrap height-icon-bg">📐</div>
+        <div>
+          <h3 class="modal-title">Desglose Antropométrico de Estatura</h3>
+          <p class="modal-desc" style="margin-bottom:0;">Análisis y distribución métrica del plantel registrado en la Academia ABC Caripito.</p>
+        </div>
+      </div>
+
+      <div class="height-metrics-grid">
+        <!-- Promedio General -->
+        <div class="height-metric-card avg-card">
+          <div class="height-metric-header">
+            <span class="height-metric-icon">📊</span>
+            <span class="height-metric-badge badge-purple">General</span>
+          </div>
+          <div class="height-metric-val" id="hbAvgHeight">1,71 m</div>
+          <div class="height-metric-label">Estatura Promedio General</div>
+          <div class="height-metric-sub">Media aritmética del plantel</div>
+        </div>
+
+        <!-- Estatura Máxima -->
+        <div class="height-metric-card max-card">
+          <div class="height-metric-header">
+            <span class="height-metric-icon">🔝</span>
+            <span class="height-metric-badge badge-blue">Máxima</span>
+          </div>
+          <div class="height-metric-val" id="hbMaxHeight">1,85 m</div>
+          <div class="height-metric-label">Estatura Máxima</div>
+          <div class="height-metric-sub" id="hbMaxAthlete">Luis Fernando Díaz Morales</div>
+        </div>
+
+        <!-- Estatura Mínima -->
+        <div class="height-metric-card min-card">
+          <div class="height-metric-header">
+            <span class="height-metric-icon">📏</span>
+            <span class="height-metric-badge badge-green">Mínima</span>
+          </div>
+          <div class="height-metric-val" id="hbMinHeight">1,58 m</div>
+          <div class="height-metric-label">Estatura Mínima</div>
+          <div class="height-metric-sub" id="hbMinAthlete">Mariana Isabel Torres Castro</div>
+        </div>
+
+        <!-- Total Atletas -->
+        <div class="height-metric-card total-card">
+          <div class="height-metric-header">
+            <span class="height-metric-icon">👥</span>
+            <span class="height-metric-badge badge-orange">Evaluados</span>
+          </div>
+          <div class="height-metric-val" id="hbTotalAthletes">8</div>
+          <div class="height-metric-label">Atletas en la Métrica</div>
+          <div class="height-metric-sub">100% con registro antropométrico</div>
+        </div>
+      </div>
+
+      <!-- Category Breakdown Section -->
+      <div class="height-cat-section">
+        <h4 class="height-cat-title">
+          <span>🏀</span> Desglose y Promedios por Categoría
+        </h4>
+        <div class="height-cat-grid" id="hbCategoryList">
+          <!-- Dynamically populated in JavaScript -->
+        </div>
+      </div>
+
+      <div style="margin-top:1.75rem;display:flex;justify-content:flex-end;">
+        <button class="btn-action-primary" onclick="closeAllModals()" style="padding:0.65rem 1.6rem;">
+          Cerrar Desglose
+        </button>
+      </div>
+    </div>
+  </div>
+  <div class="toast-notice" id="appToast">Mensaje del sistema</div>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js?v=1"></script>
+  <script src="js/supabaseClient.js?v=1"></script>
+  <script src="js/logo.js?v=2"></script>
+  <script src="js/initialData.js?v=2"></script>
+  <script src="js/app.js?v=5"></script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: abc-caripito-atletas
+    env: static
+    staticPublishPath: .
+    headers:
+      - path: /*
+        name: X-Frame-Options
+        value: SAMEORIGIN

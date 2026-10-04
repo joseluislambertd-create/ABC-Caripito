@@ -1,0 +1,18 @@
+{
+  "name": "abc-caripito-sistema-atletas",
+  "version": "1.0.0",
+  "description": "Sistema oficial de control y registro de atletas para la Academia de Baloncesto Caripito (ABC)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": [
+    "basketball",
+    "atletas",
+    "fichas",
+    "abc-caripito"
+  ],
+  "author": "Academia de Baloncesto Caripito",
+  "license": "ISC"
+}
