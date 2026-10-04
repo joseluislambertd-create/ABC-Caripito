@@ -5,13 +5,17 @@
 // Global State
 const APP_STORAGE_KEY = 'ABC_CARIPITO_ATHLETES_DB_V1';
 
+let pendingAdminCallback = null;
+
 let state = {
   athletes: [],
   selectedAthleteId: null,
   currentView: 'registro', // 'registro', 'base-datos', 'fichas-pro', 'ficha-oficial', 'impresion'
   isRepresentativeMode: false,
+  isAdmin: typeof sessionStorage !== 'undefined' && sessionStorage.getItem('ABC_ADMIN_AUTH') === 'true',
   searchQuery: '',
   filterCategory: 'all',
+  filterGender: 'all',
   filterStatus: 'all',
   filterHealth: 'all',
   activeKpiFilter: null,
@@ -92,15 +96,15 @@ function updateCloudStatusIndicator() {
   const label = document.getElementById('cloudStatusLabel');
   const isCloud = window.ABCSupabase && window.ABCSupabase.isCloudActive();
 
-  if (badge && label) {
+  if (badge) {
     if (isCloud) {
       badge.classList.add('connected');
-      badge.title = 'Conectado a Base de Datos en la Nube (Supabase PostgreSQL)';
-      label.innerText = 'Nube Supabase';
+      badge.title = '🟢 Conectado en Tiempo Real a Supabase PostgreSQL';
+      if (label) label.innerText = 'Nube';
     } else {
       badge.classList.remove('connected');
-      badge.title = 'Almacenamiento Local Activo (Configura js/config.js para conectar Supabase)';
-      label.innerText = 'Modo Local';
+      badge.title = '⚪ Modo Local / Sin Conexión Nube';
+      if (label) label.innerText = 'Local';
     }
   }
 }
@@ -198,27 +202,93 @@ function isMedicalAlert(text) {
   return s.length >= 3;
 }
 
+// Get Admin PIN from config or default fallback
+function getAdminPin() {
+  const config = window.ABC_CONFIG || {};
+  return config.ADMIN_PIN || 'abc2026';
+}
+
+// Modal and Authentication Methods for Admin (Directiva)
+window.openAdminAuthModal = function(onSuccessCallback = null) {
+  pendingAdminCallback = typeof onSuccessCallback === 'function' ? onSuccessCallback : null;
+  const modal = document.getElementById('modalAdminAuth');
+  const input = document.getElementById('adminPinInput');
+  const errEl = document.getElementById('adminPinError');
+  if (input) input.value = '';
+  if (errEl) errEl.style.display = 'none';
+  if (modal) modal.classList.add('active');
+  if (input) setTimeout(() => input.focus(), 150);
+};
+
+window.handleAdminAuthSubmit = function(e) {
+  e.preventDefault();
+  const input = document.getElementById('adminPinInput');
+  const errEl = document.getElementById('adminPinError');
+  const enteredPin = (input?.value || '').trim();
+  const validPin = getAdminPin();
+
+  if (enteredPin === validPin || enteredPin.toLowerCase() === validPin.toLowerCase()) {
+    state.isAdmin = true;
+    state.isRepresentativeMode = false;
+    sessionStorage.setItem('ABC_ADMIN_AUTH', 'true');
+    closeAllModals();
+    applyRolePermissions();
+    renderAll();
+    showToast('🛡️ Modo Directiva ABC activado: Permisos de edición y eliminación habilitados');
+    if (typeof pendingAdminCallback === 'function') {
+      const cb = pendingAdminCallback;
+      pendingAdminCallback = null;
+      cb();
+    }
+  } else {
+    if (errEl) errEl.style.display = 'block';
+    if (input) {
+      input.select();
+      input.focus();
+    }
+  }
+};
+
+window.toggleAdminPinVisibility = function() {
+  const input = document.getElementById('adminPinInput');
+  if (input) {
+    input.type = input.type === 'password' ? 'text' : 'password';
+  }
+};
+
+window.logoutAdmin = function() {
+  state.isAdmin = false;
+  state.isRepresentativeMode = true;
+  sessionStorage.removeItem('ABC_ADMIN_AUTH');
+  applyRolePermissions();
+  renderAll();
+  showToast('🔒 Sesión de Administrador cerrada: Modo Consulta activado');
+};
+
 // Check URL Params (e.g. ?view=registro or ?view=database)
 function checkUrlParams() {
   const params = new URLSearchParams(window.location.search);
   const viewParam = params.get('view') || params.get('mode');
   const roleParam = params.get('role');
 
-  // Detect restricted Representative Mode (?view=registro o ?mode=registro o ?role=representante)
-  if (viewParam === 'registro' || roleParam === 'representante' || roleParam === 'public') {
+  // Detect Public/Representative Mode (?role=representante o ?role=public)
+  if (roleParam === 'representante' || roleParam === 'public' || roleParam === 'consulta') {
     state.isRepresentativeMode = true;
-    switchView('registro');
+    state.isAdmin = false;
+    sessionStorage.removeItem('ABC_ADMIN_AUTH');
   } else {
-    state.isRepresentativeMode = false;
-    if (viewParam && ['base-datos', 'fichas-pro', 'ficha-oficial'].includes(viewParam)) {
-      switchView(viewParam);
-    } else {
-      switchView('registro');
-    }
+    state.isAdmin = sessionStorage.getItem('ABC_ADMIN_AUTH') === 'true';
+    state.isRepresentativeMode = !state.isAdmin;
+  }
+
+  if (viewParam && ['base-datos', 'fichas-pro', 'ficha-oficial', 'registro'].includes(viewParam)) {
+    switchView(viewParam);
+  } else {
+    switchView('registro');
   }
 
   const athleteParam = params.get('id');
-  if (athleteParam && !state.isRepresentativeMode) {
+  if (athleteParam) {
     const found = state.athletes.find(a => a.id.toLowerCase() === athleteParam.toLowerCase());
     if (found) {
       state.selectedAthleteId = found.id;
@@ -229,70 +299,54 @@ function checkUrlParams() {
   applyRolePermissions();
 }
 
-// Apply Role Permissions & Restrict Modules in Representative Mode
+// Apply Role Permissions & Restrict Modules in Representative / Admin Mode
 function applyRolePermissions() {
-  const isRep = !!state.isRepresentativeMode;
-  document.body.classList.toggle('rep-mode-active', isRep);
+  const isAdmin = !!state.isAdmin;
+  document.body.classList.toggle('admin-mode-active', isAdmin);
+  document.body.classList.toggle('rep-mode-active', !isAdmin);
 
-  const shareBtn = document.getElementById('btnOpenShareModal');
+  const btnAdminAuth = document.getElementById('btnOpenAdminAuth');
+  const adminBadge = document.getElementById('adminActiveBadge');
   const repBadge = document.getElementById('repModeBadge');
   const btnSuccessFicha = document.getElementById('btnSuccessViewFicha');
   const btnSuccessDb = document.getElementById('btnSuccessViewDatabase');
   const btnSuccessNew = document.getElementById('btnSuccessNewRegister');
 
-  if (isRep) {
-    if (shareBtn) shareBtn.style.display = 'none';
-    if (repBadge) repBadge.style.display = 'inline-flex';
-    if (btnSuccessFicha) btnSuccessFicha.style.display = 'none';
-    if (btnSuccessDb) btnSuccessDb.style.display = 'none';
-    if (btnSuccessNew) btnSuccessNew.style.display = 'inline-flex';
-
-    // Set KPI Cards to Read-Only mode
-    const kpiCards = [
-      { id: 'kpiCardTotal', hint: '📋 TOTAL REGISTRADOS' },
-      { id: 'kpiCardActive', hint: '⚡ EN ENTRENAMIENTO' },
-      { id: 'kpiCardHealth', hint: '🩺 CONTROL DE SALUD' },
-      { id: 'kpiCardHeight', hint: '📏 PROMEDIO DEL PLANTEL' }
-    ];
-
-    kpiCards.forEach(k => {
-      const card = document.getElementById(k.id);
-      if (card) {
-        card.classList.remove('stat-card-interactive');
-        card.removeAttribute('role');
-        card.removeAttribute('tabindex');
-        card.removeAttribute('title');
-        const hintEl = card.querySelector('.stat-hint');
-        if (hintEl) hintEl.innerText = k.hint;
-      }
-    });
-  } else {
-    if (shareBtn) shareBtn.style.display = 'inline-flex';
+  if (isAdmin) {
+    if (btnAdminAuth) btnAdminAuth.style.display = 'none';
+    if (adminBadge) adminBadge.style.display = 'inline-flex';
     if (repBadge) repBadge.style.display = 'none';
     if (btnSuccessFicha) btnSuccessFicha.style.display = 'inline-flex';
     if (btnSuccessDb) btnSuccessDb.style.display = 'inline-flex';
     if (btnSuccessNew) btnSuccessNew.style.display = 'none';
-
-    // Admin KPI Cards - interactive with tooltips and action hints
-    const kpiCards = [
-      { id: 'kpiCardTotal', hint: '👁️ MOSTRAR TODOS', title: 'Haz clic para ver todos los atletas y resetear filtros' },
-      { id: 'kpiCardActive', hint: '⚡ FILTRAR ACTIVOS', title: 'Haz clic para filtrar solo atletas con estatus ACTIVO' },
-      { id: 'kpiCardHealth', hint: '⚠️ FILTRAR ALERTAS', title: 'Haz clic para filtrar atletas con alertas médicas o alergias' },
-      { id: 'kpiCardHeight', hint: '📐 VER DESGLOSE', title: 'Haz clic para ver el desglose estadístico de estatura' }
-    ];
-
-    kpiCards.forEach(k => {
-      const card = document.getElementById(k.id);
-      if (card) {
-        card.classList.add('stat-card-interactive');
-        card.setAttribute('role', 'button');
-        card.setAttribute('tabindex', '0');
-        card.setAttribute('title', k.title);
-        const hintEl = card.querySelector('.stat-hint');
-        if (hintEl) hintEl.innerText = k.hint;
-      }
-    });
+  } else {
+    if (btnAdminAuth) btnAdminAuth.style.display = 'inline-flex';
+    if (adminBadge) adminBadge.style.display = 'none';
+    if (repBadge) repBadge.style.display = 'inline-flex';
+    if (btnSuccessFicha) btnSuccessFicha.style.display = 'inline-flex';
+    if (btnSuccessDb) btnSuccessDb.style.display = 'inline-flex';
+    if (btnSuccessNew) btnSuccessNew.style.display = 'inline-flex';
   }
+
+  // Interactive KPI Cards
+  const kpiCards = [
+    { id: 'kpiCardTotal', hint: '👁️ MOSTRAR TODOS', title: 'Haz clic para ver todos los atletas y resetear filtros' },
+    { id: 'kpiCardActive', hint: '⚡ FILTRAR ACTIVOS', title: 'Haz clic para filtrar solo atletas con estatus ACTIVO' },
+    { id: 'kpiCardHealth', hint: '⚠️ FILTRAR ALERTAS', title: 'Haz clic para filtrar atletas con alertas médicas o alergias' },
+    { id: 'kpiCardHeight', hint: '📐 VER DESGLOSE', title: 'Haz clic para ver el desglose estadístico de estatura' }
+  ];
+
+  kpiCards.forEach(k => {
+    const card = document.getElementById(k.id);
+    if (card) {
+      card.classList.add('stat-card-interactive');
+      card.setAttribute('role', 'button');
+      card.setAttribute('tabindex', '0');
+      card.setAttribute('title', k.title);
+      const hintEl = card.querySelector('.stat-hint');
+      if (hintEl) hintEl.innerText = k.hint;
+    }
+  });
 }
 
 // Setup Event Listeners
@@ -326,6 +380,17 @@ function setupEventListeners() {
   if (filterCat) {
     filterCat.addEventListener('change', (e) => {
       state.filterCategory = e.target.value;
+      updateResetButtonVisibility();
+      renderTable();
+      renderCardsGrid();
+    });
+  }
+
+  const filterGender = document.getElementById('filterGender');
+  if (filterGender) {
+    filterGender.addEventListener('change', (e) => {
+      state.filterGender = e.target.value;
+      updateResetButtonVisibility();
       renderTable();
       renderCardsGrid();
     });
@@ -409,10 +474,6 @@ function setupEventListeners() {
 
 // Switch Active View
 function switchView(viewName) {
-  if (state.isRepresentativeMode && viewName !== 'registro') {
-    return; // Representative mode strictly stays on registration form
-  }
-
   state.currentView = viewName;
   
   // Update Nav tabs
@@ -552,7 +613,7 @@ function setupEditCalculations() {
 // Live Preview on Registration Form
 function setupLivePreview() {
   const inputs = [
-    'regNombres', 'regApellidos', 'regCedula', 'regFechaNac', 'regPeso',
+    'regNombres', 'regApellidos', 'regCedula', 'regGenero', 'regFechaNac', 'regPeso',
     'regEstatura', 'regPosicion', 'regCategoria', 'regDorsal', 'regSalud',
     'regRepresentante', 'regParentesco', 'regTelefonoRep'
   ];
@@ -561,6 +622,7 @@ function setupLivePreview() {
     const el = document.getElementById(id);
     if (el) {
       el.addEventListener('input', updateCardPreview);
+      el.addEventListener('change', updateCardPreview);
     }
   });
 }
@@ -569,7 +631,9 @@ function updateCardPreview() {
   const nombres = document.getElementById('regNombres')?.value || 'Nombre';
   const apellidos = document.getElementById('regApellidos')?.value || 'Atleta';
   const dorsal = document.getElementById('regDorsal')?.value || '#';
-  const posicion = document.getElementById('regPosicion')?.value || 'Posición / Categoría';
+  const posicion = document.getElementById('regPosicion')?.value || 'Formativo';
+  const categoria = document.getElementById('regCategoria')?.value || 'U18';
+  const genero = document.getElementById('regGenero')?.value || 'Masculino';
   const peso = document.getElementById('regPeso')?.value || '--';
   const estatura = document.getElementById('regEstatura')?.value || '--';
   const salud = document.getElementById('regSalud')?.value || 'Sin novedades médicas';
@@ -602,7 +666,7 @@ function updateCardPreview() {
   if (prevDorsal) prevDorsal.innerText = dorsal ? dorsal : '🏀';
 
   const prevPos = document.getElementById('previewAthletePos');
-  if (prevPos) prevPos.innerText = posicion;
+  if (prevPos) prevPos.innerText = `${posicion} • ${categoria} • ${genero}`;
 
   const prevHeight = document.getElementById('previewAthleteHeight');
   if (prevHeight) prevHeight.innerText = estatura !== '--' ? `${estatura}m` : '--';
@@ -705,6 +769,7 @@ async function handleRegisterSubmit(e) {
   const nombres = document.getElementById('regNombres').value.trim();
   const apellidos = document.getElementById('regApellidos').value.trim();
   const cedula = document.getElementById('regCedula').value.trim();
+  const genero = document.getElementById('regGenero')?.value || 'Masculino';
   const fechaNac = document.getElementById('regFechaNac').value;
   const peso = parseFloat(document.getElementById('regPeso').value) || 0;
   const estatura = parseFloat(document.getElementById('regEstatura').value) || 0;
@@ -751,6 +816,7 @@ async function handleRegisterSubmit(e) {
     nombres,
     apellidos,
     cedula,
+    genero,
     fechaNac,
     edad,
     peso,
@@ -806,7 +872,8 @@ function openSuccessModal(athlete) {
     `👤 *Atleta:* ${athlete.nombres} ${athlete.apellidos}\n` +
     `🆔 *ID Asignado:* ${athlete.id}\n` +
     `📄 *Cédula / Doc:* ${athlete.cedula}\n` +
-    `🎂 *Edad:* ${athlete.edad} años | *Cat:* ${athlete.categoria}\n` +
+    `🚻 *Rama:* ${athlete.genero || 'Masculino'} | *Cat:* ${athlete.categoria}\n` +
+    `🎂 *Edad:* ${athlete.edad} años\n` +
     `⚕️ *Salud:* ${athlete.salud}\n` +
     `👨‍👧 *Representante:* ${athlete.representante} (${athlete.parentesco})\n` +
     `📞 *Contacto:* ${athlete.telefonoRep}\n\n` +
@@ -840,7 +907,7 @@ async function openShareModal() {
 
   const isLocalHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
   const cleanPath = window.location.pathname.replace(/\/index\.html$/i, '').replace(/\/+$/, '');
-  let defaultUrl = `${window.location.origin}${cleanPath}/?view=registro`;
+  let defaultUrl = `${window.location.origin}${cleanPath}/?role=representante`;
   
   if (input) input.value = defaultUrl;
   generateQrCode(defaultUrl);
@@ -850,7 +917,7 @@ async function openShareModal() {
   if (!isLocalHost) {
     if (wifiHint) {
       wifiHint.style.display = 'block';
-      wifiHint.innerHTML = `🌐 <strong>Enlace en Producción Online:</strong> Los representantes pueden acceder desde cualquier teléfono o lugar mediante este enlace o código QR.`;
+      wifiHint.innerHTML = `🌐 <strong>Enlace Público Oficial:</strong> Los representantes acceden en Modo Consulta / Registro seguro (solo lectura de atletas existentes + registro autorizado de nuevos atletas).`;
     }
     return;
   }
@@ -862,7 +929,7 @@ async function openShareModal() {
       const data = await res.json();
       if (data && data.ip && data.ip !== '127.0.0.1') {
         const portStr = data.port && data.port !== 80 ? `:${data.port}` : '';
-        const lanUrl = `http://${data.ip}${portStr}/?view=registro`;
+        const lanUrl = `http://${data.ip}${portStr}/?role=representante`;
 
         if (input) {
           input.value = lanUrl;
@@ -871,7 +938,7 @@ async function openShareModal() {
 
         if (wifiHint) {
           wifiHint.style.display = 'block';
-          wifiHint.innerHTML = `📡 <strong>IP Wi-Fi Detectada:</strong> <code>${data.ip}</code> (Puerto ${data.port || 3000})<br/><span style="font-size:0.75rem;color:#93c5fd;">✓ Código QR y enlace generados con la IP local de tu PC para conexión instantánea desde teléfonos móviles.</span>`;
+          wifiHint.innerHTML = `📡 <strong>IP Wi-Fi Detectada:</strong> <code>${data.ip}</code> (Puerto ${data.port || 3000})<br/><span style="font-size:0.75rem;color:#93c5fd;">✓ Código QR y enlace configurados en <strong>Modo Representante (Solo Lectura + Registro)</strong> para escaneo móvil.</span>`;
         }
         return;
       }
@@ -891,6 +958,12 @@ function closeAllModals() {
   document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active'));
 }
 
+// Helper to normalize categories (e.g., 'U-18' and 'U18' -> 'U18')
+function normalizeCategory(cat) {
+  if (!cat) return '';
+  return cat.toString().trim().toUpperCase().replace(/[-\s]/g, '');
+}
+
 // Render Master Table
 function renderTable() {
   const tbody = document.getElementById('athletesTableBody');
@@ -908,8 +981,13 @@ function renderTable() {
       id.includes(state.searchQuery) ||
       rep.includes(state.searchQuery);
 
-    const matchesCat = state.filterCategory === 'all' || a.categoria === state.filterCategory;
+    const matchesCat = state.filterCategory === 'all' || 
+      normalizeCategory(a.categoria) === normalizeCategory(state.filterCategory);
     
+    const athleteGender = a.genero || 'Masculino';
+    const matchesGender = state.filterGender === 'all' || 
+      athleteGender.toLowerCase() === state.filterGender.toLowerCase();
+
     const matchesStatus = state.filterStatus === 'all' || 
       (a.estatus || 'Activo').toLowerCase() === state.filterStatus.toLowerCase();
 
@@ -920,7 +998,7 @@ function renderTable() {
       matchesHealth = !isMedicalAlert(a.salud);
     }
 
-    return matchesSearch && matchesCat && matchesStatus && matchesHealth;
+    return matchesSearch && matchesCat && matchesGender && matchesStatus && matchesHealth;
   });
 
   updateResetButtonVisibility();
@@ -957,6 +1035,40 @@ function renderTable() {
 
     const cleanPhone = (a.telefonoRep || '').replace(/\D/g, '');
     const waUrl = cleanPhone ? `https://wa.me/58${cleanPhone.startsWith('0') ? cleanPhone.slice(1) : cleanPhone}` : '#';
+    const athleteGender = a.genero || 'Masculino';
+    const isFem = athleteGender.toLowerCase() === 'femenino';
+
+    // Acciones condicionales según rol: Administrador (Directiva) vs Representante (Modo Consulta)
+    let actionsHtml = '';
+    if (state.isAdmin) {
+      actionsHtml = `
+        <div class="cell-actions">
+          <button class="btn-icon-action" title="Ver Ficha Oficial" onclick="viewAthleteFicha('${a.id}')">
+            📄
+          </button>
+          <button class="btn-icon-action edit" title="Editar Atleta (Directiva)" onclick="openEditAthleteModal('${a.id}')">
+            ✏️
+          </button>
+          <a href="${waUrl}" target="_blank" class="btn-icon-action wa" style="color:#25d366;" title="Enviar WhatsApp al Representante">
+            💬
+          </a>
+          <button class="btn-icon-action delete" title="Eliminar Atleta (Directiva)" onclick="deleteAthlete('${a.id}')">
+            🗑️
+          </button>
+        </div>
+      `;
+    } else {
+      actionsHtml = `
+        <div class="cell-actions">
+          <button class="btn-icon-action" title="Ver Ficha Oficial del Atleta" onclick="viewAthleteFicha('${a.id}')">
+            📄
+          </button>
+          <a href="${waUrl}" target="_blank" class="btn-icon-action wa" style="color:#25d366;" title="Enviar WhatsApp al Representante">
+            💬
+          </a>
+        </div>
+      `;
+    }
 
     return `
       <tr>
@@ -970,7 +1082,12 @@ function renderTable() {
             </div>
           </div>
         </td>
-        <td><span class="badge-status activo">${a.categoria || 'U-18'}</span></td>
+        <td>
+          <div style="display:inline-flex;gap:0.35rem;align-items:center;flex-wrap:wrap;">
+            <span class="badge-status activo">${a.categoria || 'U18'}</span>
+            <span class="badge-gender ${isFem ? 'fem' : 'masc'}">${isFem ? '♀ Fem' : '♂ Masc'}</span>
+          </div>
+        </td>
         <td><strong>${a.estatura || '--'} m</strong> / ${a.peso || '--'} kg</td>
         <td><span class="badge-imc">${a.imc || '--'}</span></td>
         <td>${healthBadge}</td>
@@ -980,20 +1097,7 @@ function renderTable() {
         </td>
         <td><span class="badge-status ${statusClass}">${statusVal}</span></td>
         <td>
-          <div class="cell-actions">
-            <button class="btn-icon-action" title="Ver Ficha Oficial" onclick="viewAthleteFicha('${a.id}')">
-              📄
-            </button>
-            <button class="btn-icon-action edit" title="Editar Atleta" onclick="openEditAthleteModal('${a.id}')">
-              ✏️
-            </button>
-            <a href="${waUrl}" target="_blank" class="btn-icon-action wa" style="color:#25d366;" title="Enviar WhatsApp">
-              💬
-            </a>
-            <button class="btn-icon-action delete" title="Eliminar Atleta" onclick="deleteAthlete('${a.id}')">
-              🗑️
-            </button>
-          </div>
+          ${actionsHtml}
         </td>
       </tr>
     `;
@@ -1008,8 +1112,13 @@ function renderCardsGrid() {
   let filtered = state.athletes.filter(a => {
     const fullName = `${a.nombres} ${a.apellidos}`.toLowerCase();
     const matchesSearch = !state.searchQuery || fullName.includes(state.searchQuery) || a.id.toLowerCase().includes(state.searchQuery);
-    const matchesCat = state.filterCategory === 'all' || a.categoria === state.filterCategory;
-    return matchesSearch && matchesCat;
+    const matchesCat = state.filterCategory === 'all' || 
+      normalizeCategory(a.categoria) === normalizeCategory(state.filterCategory);
+    const athleteGender = a.genero || 'Masculino';
+    const matchesGender = state.filterGender === 'all' || 
+      athleteGender.toLowerCase() === state.filterGender.toLowerCase();
+
+    return matchesSearch && matchesCat && matchesGender;
   });
 
   if (filtered.length === 0) {
@@ -1021,6 +1130,7 @@ function renderCardsGrid() {
     const hasAlert = isMedicalAlert(a.salud);
     const cleanPhone = (a.telefonoRep || '').replace(/\D/g, '');
     const waUrl = cleanPhone ? `https://wa.me/58${cleanPhone.startsWith('0') ? cleanPhone.slice(1) : cleanPhone}` : '#';
+    const athleteGender = a.genero || 'Masculino';
 
     return `
       <div class="athlete-pro-card">
@@ -1039,7 +1149,7 @@ function renderCardsGrid() {
           </div>
           
           <h3 class="athlete-name">${a.nombres} ${a.apellidos}</h3>
-          <span class="athlete-position-tag">${a.posicion || 'Atleta ABC'} • ${a.categoria || 'U-18'}</span>
+          <span class="athlete-position-tag">${a.posicion || 'Atleta ABC'} • ${a.categoria || 'U18'} • ${athleteGender}</span>
           
           <div class="stats-grid-compact">
             <div class="stat-box-mini">
@@ -1092,7 +1202,7 @@ function renderFichaOficial() {
   if (select) {
     select.innerHTML = state.athletes.map(a => `
       <option value="${a.id}" ${a.id === state.selectedAthleteId ? 'selected' : ''}>
-        ${a.id} - ${a.nombres} ${a.apellidos} (${a.categoria || 'U-18'})
+        ${a.id} - ${a.nombres} ${a.apellidos} (${a.categoria || 'U18'})
       </option>
     `).join('');
   }
@@ -1126,7 +1236,8 @@ function renderFichaOficial() {
           <img src="${athlete.foto || DEFAULT_AVATARS[0]}" class="ficha-portrait-img" alt="${athlete.nombres}" />
           <span class="ficha-dorsal-tag">DORSAL #${athlete.dorsal || '00'}</span>
           <div style="font-size:0.8rem;color:#64748b;font-weight:700;text-align:center;">
-            Categoría: <strong>${athlete.categoria || 'U-18'}</strong><br/>
+            Categoría: <strong>${athlete.categoria || 'U18'}</strong><br/>
+            Rama: <strong>${athlete.genero || 'Masculino'}</strong><br/>
             Posición: <strong>${athlete.posicion || 'Formativo'}</strong>
           </div>
         </div>
@@ -1146,6 +1257,10 @@ function renderFichaOficial() {
               <div class="ficha-field-item">
                 <div class="label">Cédula / Documento</div>
                 <div class="value">${athlete.cedula}</div>
+              </div>
+              <div class="ficha-field-item">
+                <div class="label">Rama / Género</div>
+                <div class="value">${athlete.genero || 'Masculino'}</div>
               </div>
               <div class="ficha-field-item">
                 <div class="label">Fecha Nacimiento</div>
@@ -1281,7 +1396,7 @@ window.openHeightBreakdownModal = function() {
   const heights = validAthletes.map(a => ({
     height: parseFloat(a.estatura),
     name: `${a.nombres} ${a.apellidos}`,
-    categoria: a.categoria || 'U-18',
+    categoria: a.categoria || 'U18',
     dorsal: a.dorsal || ''
   }));
 
@@ -1318,7 +1433,7 @@ window.openHeightBreakdownModal = function() {
   // Breakdown by Category
   const catMap = {};
   validAthletes.forEach(a => {
-    const cat = a.categoria || 'U-18';
+    const cat = a.categoria || 'U18';
     if (!catMap[cat]) catMap[cat] = [];
     catMap[cat].push(parseFloat(a.estatura));
   });
@@ -1356,7 +1471,10 @@ window.openHeightBreakdownModal = function() {
 };
 
 window.openEditAthleteModal = function(id) {
-  if (state.isRepresentativeMode) return; // Prohibido editar en modo representante
+  if (!state.isAdmin) {
+    openAdminAuthModal(() => openEditAthleteModal(id));
+    return;
+  }
   const athlete = state.athletes.find(a => a.id === id);
   if (!athlete) return;
 
@@ -1365,17 +1483,38 @@ window.openEditAthleteModal = function(id) {
 
   document.getElementById('editAthleteId').value = athlete.id;
   document.getElementById('editModalTitle').innerText = `Editar Atleta - ${athlete.id}`;
-  document.getElementById('editModalSubtitle').innerText = `${athlete.nombres} ${athlete.apellidos} • ${athlete.categoria || 'U-18'}`;
+  document.getElementById('editModalSubtitle').innerText = `${athlete.nombres} ${athlete.apellidos} • ${athlete.categoria || 'U18'} • ${athlete.genero || 'Masculino'}`;
 
   document.getElementById('editNombres').value = athlete.nombres || '';
   document.getElementById('editApellidos').value = athlete.apellidos || '';
   document.getElementById('editCedula').value = athlete.cedula || '';
+  const editGeneroEl = document.getElementById('editGenero');
+  if (editGeneroEl) {
+    editGeneroEl.value = athlete.genero || 'Masculino';
+  }
   document.getElementById('editFechaNac').value = athlete.fechaNac || '';
   document.getElementById('editEdad').value = athlete.edad || '';
   document.getElementById('editDorsal').value = athlete.dorsal || '';
   document.getElementById('editEstatura').value = athlete.estatura || '';
   document.getElementById('editPeso').value = athlete.peso || '';
-  document.getElementById('editCategoria').value = athlete.categoria || 'U-18';
+  
+  // Normalizar y seleccionar la categoría en el select
+  const catEl = document.getElementById('editCategoria');
+  if (catEl) {
+    const rawCat = (athlete.categoria || 'U18').trim();
+    const cleanCat = rawCat.replace('-', '');
+    // Buscar coincidencia exacta o normalizada
+    let matched = false;
+    for (let opt of catEl.options) {
+      if (opt.value === rawCat || opt.value === cleanCat || opt.value.toLowerCase() === rawCat.toLowerCase()) {
+        catEl.value = opt.value;
+        matched = true;
+        break;
+      }
+    }
+    if (!matched) catEl.value = 'U18';
+  }
+
   document.getElementById('editPosicion').value = athlete.posicion || 'Base / Armador';
   document.getElementById('editTipoSangre').value = athlete.tipoSangre || 'O+';
   document.getElementById('editEstatus').value = athlete.estatus || 'Activo';
@@ -1409,6 +1548,10 @@ window.openEditAthleteModal = function(id) {
 
 async function handleEditFormSubmit(e) {
   e.preventDefault();
+  if (!state.isAdmin) {
+    openAdminAuthModal(() => handleEditFormSubmit(e));
+    return;
+  }
   const id = document.getElementById('editAthleteId').value;
   const index = state.athletes.findIndex(a => a.id === id);
   if (index === -1) return;
@@ -1425,6 +1568,7 @@ async function handleEditFormSubmit(e) {
     nombres: document.getElementById('editNombres').value.trim(),
     apellidos: document.getElementById('editApellidos').value.trim(),
     cedula: document.getElementById('editCedula').value.trim(),
+    genero: document.getElementById('editGenero')?.value || 'Masculino',
     fechaNac: document.getElementById('editFechaNac').value,
     edad: parseInt(document.getElementById('editEdad').value) || state.athletes[index].edad,
     dorsal: document.getElementById('editDorsal').value.trim(),
@@ -1456,6 +1600,7 @@ async function handleEditFormSubmit(e) {
 window.resetAllFilters = function(notify = true) {
   state.searchQuery = '';
   state.filterCategory = 'all';
+  state.filterGender = 'all';
   state.filterStatus = 'all';
   state.filterHealth = 'all';
   state.activeKpiFilter = null;
@@ -1465,6 +1610,9 @@ window.resetAllFilters = function(notify = true) {
 
   const catSelect = document.getElementById('filterCategory');
   if (catSelect) catSelect.value = 'all';
+
+  const genderSelect = document.getElementById('filterGender');
+  if (genderSelect) genderSelect.value = 'all';
 
   const statSelect = document.getElementById('filterStatus');
   if (statSelect) statSelect.value = 'all';
@@ -1485,7 +1633,11 @@ window.resetAllFilters = function(notify = true) {
 function updateResetButtonVisibility() {
   const btn = document.getElementById('btnResetFilters');
   if (!btn) return;
-  const isFiltered = state.searchQuery || state.filterCategory !== 'all' || state.filterStatus !== 'all' || state.filterHealth !== 'all';
+  const isFiltered = state.searchQuery || 
+    state.filterCategory !== 'all' || 
+    state.filterGender !== 'all' || 
+    state.filterStatus !== 'all' || 
+    state.filterHealth !== 'all';
   btn.style.display = isFiltered ? 'inline-flex' : 'none';
 }
 
@@ -1504,15 +1656,17 @@ function updateKpiCardHighlight() {
 }
 
 window.viewAthleteFicha = function(id) {
-  if (state.isRepresentativeMode) return; // Prohibido consultar ficha de otros en modo representante
   state.selectedAthleteId = id;
   switchView('ficha-oficial');
   window.scrollTo({ top: 0, behavior: 'smooth' });
 };
 
 window.deleteAthlete = async function(id) {
-  if (state.isRepresentativeMode) return; // Prohibido eliminar en modo representante
-  if (confirm(`¿Estás seguro de eliminar el registro del atleta ${id}?`)) {
+  if (!state.isAdmin) {
+    openAdminAuthModal(() => deleteAthlete(id));
+    return;
+  }
+  if (confirm(`¿Estás seguro de eliminar el registro del atleta ${id}? Esta acción solo puede realizarla la Directiva ABC.`)) {
     if (window.ABCSupabase) {
       await window.ABCSupabase.deleteAthlete(id);
     }
@@ -1542,11 +1696,10 @@ window.printCurrentFicha = function() {
 };
 
 window.exportDatabaseToExcel = function() {
-  if (state.isRepresentativeMode) return; // Prohibido exportar en modo representante
-  // Generate CSV with exact original Excel headers
+  // Generate CSV with exact original Excel headers including Categoría & Rama / Género
   const headers = [
-    'ID Atleta', 'Fecha Ingreso', 'Nombres', 'Apellidos', 'Cédula / Doc',
-    'Fecha Nac.', 'Edad', 'Peso (kg)', 'Estatura (m)', 'IMC',
+    'ID Atleta', 'Fecha Ingreso', 'Nombres', 'Apellidos', 'Cédula / Doc', 'Rama / Género',
+    'Fecha Nac.', 'Edad', 'Categoría', 'Posición', 'Peso (kg)', 'Estatura (m)', 'IMC',
     'Situación de Salud / Alergias', 'Nombre Representante', 'Parentesco',
     'Teléfono Rep.', 'Teléfono Emergencia', 'Ruta / Nombre Foto', 'Estatus'
   ];
@@ -1561,8 +1714,11 @@ window.exportDatabaseToExcel = function() {
       `"${a.nombres}"`,
       `"${a.apellidos}"`,
       `"${a.cedula}"`,
+      `"${a.genero || 'Masculino'}"`,
       `"${a.fechaNac || ''}"`,
       `"${a.edad}"`,
+      `"${a.categoria || 'U18'}"`,
+      `"${a.posicion || 'Formativo'}"`,
       `"${a.peso}"`,
       `"${a.estatura}"`,
       `"${a.imc}"`,
