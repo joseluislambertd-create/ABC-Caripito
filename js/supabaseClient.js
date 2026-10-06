@@ -1,15 +1,18 @@
 /* ==========================================================================
    ACADEMIA DE BALONCESTO CARIPITO (ABC) - CLIENTE SUPABASE & DATA LAYER
-   Manejo Asíncrono de Base de Datos en la Nube con Fallback Seguro
+   Manejo Asíncrono de Base de Datos en la Nube con Sincronización Realtime
    ========================================================================== */
 
 (function () {
   const LOCAL_STORAGE_KEY = 'ABC_CARIPITO_ATHLETES_DB_V1';
   let supabaseInstance = null;
   let isConnected = false;
+  let activeRealtimeChannel = null;
 
-  // Inicializar Cliente Supabase
-  function initSupabase() {
+  // Obtener o instanciar cliente de Supabase
+  function getSupabaseClient() {
+    if (supabaseInstance) return supabaseInstance;
+
     const config = window.ABC_CONFIG || {};
     const url = config.SUPABASE_URL;
     const key = config.SUPABASE_ANON_KEY;
@@ -21,9 +24,16 @@
 
     if (!isPlaceholder && window.supabase && typeof window.supabase.createClient === 'function') {
       try {
-        supabaseInstance = window.supabase.createClient(url, key);
+        supabaseInstance = window.supabase.createClient(url, key, {
+          auth: { persistSession: false },
+          realtime: {
+            params: {
+              eventsPerSecond: 10
+            }
+          }
+        });
         isConnected = true;
-        console.log('⚡ [ABC Supabase] Cliente inicializado correctamente.');
+        console.log('⚡ [ABC Supabase] Cliente inicializado y conectado a la nube:', url);
       } catch (err) {
         console.warn('⚠️ [ABC Supabase] Error al instanciar cliente Supabase:', err);
         supabaseInstance = null;
@@ -32,38 +42,53 @@
     } else {
       isConnected = false;
       if (isPlaceholder) {
-        console.log('ℹ️ [ABC Supabase] Modo Local Activo (Configura SUPABASE_URL y SUPABASE_ANON_KEY en js/config.js para conectar la nube).');
+        console.log('ℹ️ [ABC Supabase] Modo Local Activo (Configura SUPABASE_URL y SUPABASE_ANON_KEY en js/config.js).');
       }
     }
+    return supabaseInstance;
+  }
+
+  // Sanitizador numérico (manejo de comas y strings)
+  function sanitizeNumber(val, isFloat = true) {
+    if (typeof val === 'number') return isNaN(val) ? 0 : val;
+    if (!val) return 0;
+    const str = String(val).replace(',', '.').replace(/[^0-9.]/g, '');
+    const parsed = isFloat ? parseFloat(str) : parseInt(str, 10);
+    return isNaN(parsed) ? 0 : parsed;
   }
 
   // Mapear campos de objeto JavaScript (camelCase) a columnas PostgreSQL (snake_case)
-  function toDbModel(athlete) {
-    return {
+  function toDbModel(athlete, includeGenero = true) {
+    const model = {
       id: athlete.id,
       fecha_ingreso: athlete.fechaIngreso || new Date().toISOString().split('T')[0],
-      nombres: athlete.nombres,
-      apellidos: athlete.apellidos,
-      cedula: athlete.cedula,
-      genero: athlete.genero || 'Masculino',
-      fecha_nac: athlete.fechaNac || null,
-      edad: parseInt(athlete.edad, 10) || 0,
-      peso: parseFloat(athlete.peso) || 0,
-      estatura: parseFloat(athlete.estatura) || 0,
-      imc: parseFloat(athlete.imc) || 0,
-      salud: athlete.salud || 'Sin novedades médicas',
+      nombres: (athlete.nombres || '').trim(),
+      apellidos: (athlete.apellidos || '').trim(),
+      cedula: (athlete.cedula || '').trim(),
+      fecha_nac: athlete.fechaNac && athlete.fechaNac.trim() !== '' ? athlete.fechaNac.trim() : null,
+      edad: sanitizeNumber(athlete.edad, false),
+      peso: sanitizeNumber(athlete.peso, true),
+      estatura: sanitizeNumber(athlete.estatura, true),
+      imc: sanitizeNumber(athlete.imc, true),
+      salud: (athlete.salud || 'Sin novedades médicas').trim(),
       tipo_sangre: athlete.tipoSangre || 'O+',
       posicion: athlete.posicion || 'Formativo',
       categoria: athlete.categoria || 'U18',
       dorsal: athlete.dorsal || 'S/N',
-      representante: athlete.representante,
-      parentesco: athlete.parentesco,
-      telefono_rep: athlete.telefonoRep,
-      telefono_emergencia: athlete.telefonoEmergencia || athlete.telefonoRep,
-      direccion: athlete.direccion || 'Caripito, Edo. Monagas',
+      representante: (athlete.representante || '').trim(),
+      parentesco: athlete.parentesco || 'Padre',
+      telefono_rep: (athlete.telefonoRep || '').trim(),
+      telefono_emergencia: (athlete.telefonoEmergencia || athlete.telefonoRep || '').trim(),
+      direccion: (athlete.direccion || 'Caripito, Edo. Monagas').trim(),
       foto: athlete.foto || null,
       estatus: athlete.estatus || 'Activo'
     };
+
+    if (includeGenero) {
+      model.genero = athlete.genero || 'Masculino';
+    }
+
+    return model;
   }
 
   // Mapear columnas PostgreSQL (snake_case) a objeto JavaScript (camelCase)
@@ -75,27 +100,27 @@
       apellidos: row.apellidos,
       cedula: row.cedula,
       genero: row.genero || 'Masculino',
-      fechaNac: row.fecha_nac,
-      edad: row.edad,
-      peso: parseFloat(row.peso) || 0,
-      estatura: parseFloat(row.estatura) || 0,
-      imc: parseFloat(row.imc) || 0,
-      salud: row.salud,
-      tipoSangre: row.tipo_sangre,
-      posicion: row.posicion,
-      categoria: row.categoria,
-      dorsal: row.dorsal,
-      representante: row.representante,
-      parentesco: row.parentesco,
-      telefonoRep: row.telefono_rep,
-      telefonoEmergencia: row.telefono_emergencia,
-      direccion: row.direccion,
-      foto: row.foto,
+      fechaNac: row.fecha_nac || '',
+      edad: parseInt(row.edad, 10) || 0,
+      peso: sanitizeNumber(row.peso, true),
+      estatura: sanitizeNumber(row.estatura, true),
+      imc: sanitizeNumber(row.imc, true),
+      salud: row.salud || 'Sin novedades médicas',
+      tipoSangre: row.tipo_sangre || 'O+',
+      posicion: row.posicion || 'Formativo',
+      categoria: row.categoria || 'U18',
+      dorsal: row.dorsal || 'S/N',
+      representante: row.representante || '',
+      parentesco: row.parentesco || 'Padre',
+      telefonoRep: row.telefono_rep || '',
+      telefonoEmergencia: row.telefono_emergencia || row.telefono_rep || '',
+      direccion: row.direccion || 'Caripito, Edo. Monagas',
+      foto: row.foto || null,
       estatus: row.estatus || 'Activo'
     };
   }
 
-  // Obtener atletas desde LocalStorage
+  // Obtener atletas desde LocalStorage (caché de respaldo)
   function getLocalAthletes() {
     try {
       const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
@@ -104,7 +129,7 @@
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       }
     } catch (e) {
-      console.error('Error leyendo localStorage', e);
+      console.error('Error leyendo LocalStorage', e);
     }
     return window.INITIAL_ATHLETES ? [...window.INITIAL_ATHLETES] : [];
   }
@@ -114,47 +139,62 @@
     try {
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(athletes));
     } catch (e) {
-      console.error('Error guardando en localStorage', e);
+      console.error('Error guardando en LocalStorage', e);
     }
   }
 
   // API Asíncrona Unificada
   const dbApi = {
-    // Verificar si está conectado a la nube
+    // Verificar si el cliente de Supabase está activo
     isCloudActive: function () {
-      return !!(supabaseInstance && isConnected);
+      const client = getSupabaseClient();
+      return !!(client && isConnected);
     },
 
     // 1. Obtener todos los atletas (READ)
     fetchAthletes: async function () {
-      if (dbApi.isCloudActive()) {
+      const client = getSupabaseClient();
+      if (client && isConnected) {
         try {
-          const { data, error } = await supabaseInstance
+          const { data, error } = await client
             .from('atletas')
             .select('*')
-            .order('created_at', { ascending: false });
+            .order('id', { ascending: true });
 
           if (error) {
-            console.error('Error en Supabase SELECT:', error);
+            console.error('⚠️ [Supabase SELECT Error]:', error);
             return getLocalAthletes();
           }
 
           if (data && data.length > 0) {
             const mapped = data.map(fromDbModel);
-            saveLocalAthletes(mapped); // Sincroniza caché local
+            // Ordenar de forma natural por ID o created_at
+            mapped.sort((a, b) => {
+              const numA = parseInt((a.id || '').replace(/[^0-9]/g, ''), 10) || 0;
+              const numB = parseInt((b.id || '').replace(/[^0-9]/g, ''), 10) || 0;
+              return numA - numB;
+            });
+            saveLocalAthletes(mapped); // Sincroniza respaldo local
+            console.log(`☁️ [Supabase] ${mapped.length} atletas cargados desde la nube.`);
             return mapped;
           } else if (data && data.length === 0) {
-            // Si la base de datos en la nube está recién creada pero vacía, se siembran los iniciales
+            // Si la base de datos está vacía, sembrar iniciales
             const initialList = window.INITIAL_ATHLETES ? [...window.INITIAL_ATHLETES] : [];
             if (initialList.length > 0) {
-              const rows = initialList.map(toDbModel);
-              await supabaseInstance.from('atletas').insert(rows);
+              const rows = initialList.map(a => toDbModel(a, true));
+              try {
+                await client.from('atletas').insert(rows);
+              } catch (seedErr) {
+                console.warn('Error al sembrar iniciales con genero, reintentando sin genero...', seedErr);
+                const rowsNoGenero = initialList.map(a => toDbModel(a, false));
+                await client.from('atletas').insert(rowsNoGenero);
+              }
               return initialList;
             }
             return [];
           }
         } catch (err) {
-          console.warn('Excepción al conectar con Supabase, usando respaldo local:', err);
+          console.warn('⚠️ [Supabase Exception] Usando respaldo local:', err);
           return getLocalAthletes();
         }
       }
@@ -163,111 +203,191 @@
 
     // 2. Crear nuevo atleta (CREATE)
     insertAthlete: async function (athlete) {
-      // Guardar primero en caché local para respuesta inmediata
-      const local = getLocalAthletes();
-      local.unshift(athlete);
-      saveLocalAthletes(local);
+      const client = getSupabaseClient();
 
-      if (dbApi.isCloudActive()) {
+      if (client && isConnected) {
         try {
-          const row = toDbModel(athlete);
-          const { data, error } = await supabaseInstance
+          // Intentar inserción completa con genero
+          let row = toDbModel(athlete, true);
+          let response = await client
             .from('atletas')
             .insert([row])
             .select();
 
-          if (error) {
-            console.error('Error en Supabase INSERT:', error);
-            return { success: false, error, data: athlete };
+          // Si falla por columna 'genero' faltante en la tabla Supabase, reintentar automáticamente sin genero
+          if (response.error && (response.error.message.includes('genero') || response.error.code === 'PGRST204')) {
+            console.warn('⚠️ Columna genero ausente en Supabase, reintentando inserción sin genero...');
+            row = toDbModel(athlete, false);
+            response = await client
+              .from('atletas')
+              .insert([row])
+              .select();
           }
-          return { success: true, data: data ? fromDbModel(data[0]) : athlete };
+
+          if (response.error) {
+            console.error('❌ [Supabase INSERT Error]:', response.error);
+            // Si la nube falló por error de BD, sincronizar local como fallback
+            const local = getLocalAthletes();
+            local.push(athlete);
+            saveLocalAthletes(local);
+            return { success: false, error: response.error, data: athlete };
+          }
+
+          const savedItem = response.data && response.data[0] ? fromDbModel(response.data[0]) : athlete;
+          console.log('✅ [Supabase INSERT Exitoso]:', savedItem.id);
+
+          // Actualizar caché local con el atleta confirmado en la nube
+          const local = getLocalAthletes().filter(a => a.id !== savedItem.id);
+          local.push(savedItem);
+          saveLocalAthletes(local);
+
+          return { success: true, data: savedItem };
         } catch (err) {
-          console.error('Excepción en Supabase INSERT:', err);
+          console.error('❌ [Supabase INSERT Excepción]:', err);
+          const local = getLocalAthletes();
+          local.push(athlete);
+          saveLocalAthletes(local);
           return { success: false, error: err, data: athlete };
         }
       }
-      return { success: true, data: athlete };
+
+      // Modo Local puro
+      const local = getLocalAthletes();
+      local.push(athlete);
+      saveLocalAthletes(local);
+      return { success: true, data: athlete, isLocalOnly: true };
     },
 
     // 3. Actualizar atleta existente (UPDATE)
     updateAthlete: async function (id, updatedFields) {
-      const local = getLocalAthletes();
-      const index = local.findIndex(a => a.id === id);
-      if (index !== -1) {
-        local[index] = { ...local[index], ...updatedFields };
-        saveLocalAthletes(local);
-      }
+      const client = getSupabaseClient();
 
-      if (dbApi.isCloudActive()) {
+      if (client && isConnected) {
         try {
-          const row = toDbModel({ id, ...updatedFields });
-          const { data, error } = await supabaseInstance
+          let row = toDbModel({ id, ...updatedFields }, true);
+          let response = await client
             .from('atletas')
             .update(row)
             .eq('id', id)
             .select();
 
-          if (error) {
-            console.error('Error en Supabase UPDATE:', error);
-            return { success: false, error };
+          // Si falla por columna genero, reintentar sin genero
+          if (response.error && (response.error.message.includes('genero') || response.error.code === 'PGRST204')) {
+            row = toDbModel({ id, ...updatedFields }, false);
+            response = await client
+              .from('atletas')
+              .update(row)
+              .eq('id', id)
+              .select();
           }
-          return { success: true, data };
+
+          if (response.error) {
+            console.error('❌ [Supabase UPDATE Error]:', response.error);
+            return { success: false, error: response.error };
+          }
+
+          // Actualizar caché local
+          const local = getLocalAthletes();
+          const idx = local.findIndex(a => a.id === id);
+          if (idx !== -1) {
+            local[idx] = { ...local[idx], ...updatedFields };
+            saveLocalAthletes(local);
+          }
+
+          console.log('✅ [Supabase UPDATE Exitoso]:', id);
+          return { success: true, data: response.data };
         } catch (err) {
-          console.error('Excepción en Supabase UPDATE:', err);
+          console.error('❌ [Supabase UPDATE Excepción]:', err);
           return { success: false, error: err };
         }
       }
-      return { success: true };
+
+      // Modo Local puro
+      const local = getLocalAthletes();
+      const idx = local.findIndex(a => a.id === id);
+      if (idx !== -1) {
+        local[idx] = { ...local[idx], ...updatedFields };
+        saveLocalAthletes(local);
+      }
+      return { success: true, isLocalOnly: true };
     },
 
     // 4. Eliminar atleta (DELETE)
     deleteAthlete: async function (id) {
-      let local = getLocalAthletes();
-      local = local.filter(a => a.id !== id);
-      saveLocalAthletes(local);
+      const client = getSupabaseClient();
 
-      if (dbApi.isCloudActive()) {
+      if (client && isConnected) {
         try {
-          const { error } = await supabaseInstance
+          const { error } = await client
             .from('atletas')
             .delete()
             .eq('id', id);
 
           if (error) {
-            console.error('Error en Supabase DELETE:', error);
+            console.error('❌ [Supabase DELETE Error]:', error);
             return { success: false, error };
           }
+
+          // Actualizar caché local
+          let local = getLocalAthletes();
+          local = local.filter(a => a.id !== id);
+          saveLocalAthletes(local);
+
+          console.log('✅ [Supabase DELETE Exitoso]:', id);
           return { success: true };
         } catch (err) {
-          console.error('Excepción en Supabase DELETE:', err);
+          console.error('❌ [Supabase DELETE Excepción]:', err);
           return { success: false, error: err };
         }
       }
-      return { success: true };
+
+      // Modo Local puro
+      let local = getLocalAthletes();
+      local = local.filter(a => a.id !== id);
+      saveLocalAthletes(local);
+      return { success: true, isLocalOnly: true };
     },
 
     // 5. Suscripción en Tiempo Real (Realtime Listener)
     subscribeRealtime: function (onChangeCallback) {
-      if (dbApi.isCloudActive() && typeof onChangeCallback === 'function') {
-        try {
-          const channel = supabaseInstance
-            .channel('atletas_realtime')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'atletas' }, (payload) => {
-              console.log('⚡ [Realtime Supabase] Cambio detectado en la nube:', payload);
-              onChangeCallback(payload);
-            })
-            .subscribe();
-          return channel;
-        } catch (err) {
-          console.warn('No se pudo establecer suscripción Realtime:', err);
-        }
+      const client = getSupabaseClient();
+      if (!client || !isConnected || typeof onChangeCallback !== 'function') {
+        return null;
       }
-      return null;
+
+      try {
+        if (activeRealtimeChannel) {
+          client.removeChannel(activeRealtimeChannel);
+        }
+
+        activeRealtimeChannel = client
+          .channel('public:atletas')
+          .on(
+            'postgres_changes',
+            { event: '*', schema: 'public', table: 'atletas' },
+            (payload) => {
+              console.log('⚡ [Realtime Supabase] Evento recibido en vivo:', payload.eventType, payload);
+              onChangeCallback(payload);
+            }
+          )
+          .subscribe((status, err) => {
+            if (status === 'SUBSCRIBED') {
+              console.log('🟢 [Realtime Supabase] Canal conectado en tiempo real.');
+            } else if (status === 'CHANNEL_ERROR') {
+              console.warn('⚠️ [Realtime Supabase] Error en canal Realtime:', err);
+            }
+          });
+
+        return activeRealtimeChannel;
+      } catch (err) {
+        console.warn('⚠️ Error al establecer suscripción Realtime en Supabase:', err);
+        return null;
+      }
     }
   };
 
   // Inicializar al cargar
-  initSupabase();
+  getSupabaseClient();
 
   // Exponer globalmente
   window.ABCSupabase = dbApi;

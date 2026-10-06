@@ -53,7 +53,8 @@ function initLogo() {
 }
 
 // Load athletes from Supabase (Cloud) or LocalStorage (Fallback)
-async function loadAthletes() {
+async function loadAthletes(isRealtime = false) {
+  const previousSelectedId = state.selectedAthleteId;
   if (window.ABCSupabase) {
     state.athletes = await window.ABCSupabase.fetchAthletes();
   } else {
@@ -74,7 +75,9 @@ async function loadAthletes() {
   }
 
   if (state.athletes.length > 0) {
-    if (!state.selectedAthleteId || !state.athletes.some(a => a.id === state.selectedAthleteId)) {
+    if (previousSelectedId && state.athletes.some(a => a.id === previousSelectedId)) {
+      state.selectedAthleteId = previousSelectedId;
+    } else {
       state.selectedAthleteId = state.athletes[0].id;
     }
   } else {
@@ -113,9 +116,9 @@ function updateCloudStatusIndicator() {
 function setupRealtimeSync() {
   if (window.ABCSupabase && window.ABCSupabase.isCloudActive()) {
     window.ABCSupabase.subscribeRealtime(async (payload) => {
-      console.log('⚡ Recibiendo actualización en tiempo real...', payload);
-      await loadAthletes();
-      showToast('⚡ Datos sincronizados en tiempo real con la nube');
+      console.log('⚡ Recibiendo actualización en tiempo real desde Supabase...', payload);
+      await loadAthletes(true);
+      showToast('⚡ Base de datos sincronizada en tiempo real');
     });
   }
 }
@@ -710,15 +713,38 @@ function setupPhotoUploader() {
     if (file && file.type.startsWith('image/')) {
       const reader = new FileReader();
       reader.onload = (e) => {
-        state.activePhotoData = e.target.result;
-        if (previewImg) {
-          previewImg.src = e.target.result;
-          previewImg.style.display = 'block';
-        }
-        if (livePreviewAvatar) {
-          livePreviewAvatar.src = e.target.result;
-        }
-        showToast('Foto cargada correctamente');
+        const img = new Image();
+        img.onload = () => {
+          // Limitar resolución a máx 500x500 para compresión y carga veloz
+          const maxDim = 500;
+          let width = img.width;
+          let height = img.height;
+          if (width > height && width > maxDim) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else if (height > maxDim) {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+
+          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.82);
+          state.activePhotoData = compressedBase64;
+          if (previewImg) {
+            previewImg.src = compressedBase64;
+            previewImg.style.display = 'block';
+          }
+          if (livePreviewAvatar) {
+            livePreviewAvatar.src = compressedBase64;
+          }
+          showToast('📸 Foto procesada y optimizada');
+        };
+        img.src = e.target.result;
       };
       reader.readAsDataURL(file);
     }
@@ -836,25 +862,49 @@ async function handleRegisterSubmit(e) {
     estatus: 'Activo'
   };
 
-  // Add to state and cloud database
-  if (window.ABCSupabase) {
-    await window.ABCSupabase.insertAthlete(newAthlete);
+  // Deshabilitar botón temporalmente para feedback visual
+  const submitBtn = e.target.querySelector('button[type="submit"]');
+  const originalBtnHtml = submitBtn ? submitBtn.innerHTML : '';
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span>⏳</span> Guardando en Supabase...';
   }
-  state.athletes.unshift(newAthlete);
-  state.selectedAthleteId = newId;
-  saveAthletes();
 
-  // Reset form
-  document.getElementById('athleteRegisterForm').reset();
-  state.activePhotoData = null;
-  const previewImg = document.getElementById('regPhotoThumb');
-  if (previewImg) previewImg.style.display = 'none';
+  try {
+    let savedAthlete = newAthlete;
+    // Add to state and cloud database
+    if (window.ABCSupabase) {
+      const res = await window.ABCSupabase.insertAthlete(newAthlete);
+      if (res && res.data) {
+        savedAthlete = res.data;
+      }
+    }
 
-  // Update UI
-  renderAll();
+    state.athletes = state.athletes.filter(a => a.id !== savedAthlete.id);
+    state.athletes.unshift(savedAthlete);
+    state.selectedAthleteId = savedAthlete.id;
+    saveAthletes();
 
-  // Open Success Modal
-  openSuccessModal(newAthlete);
+    // Reset form
+    document.getElementById('athleteRegisterForm').reset();
+    state.activePhotoData = null;
+    const previewImg = document.getElementById('regPhotoThumb');
+    if (previewImg) previewImg.style.display = 'none';
+
+    // Update UI
+    renderAll();
+
+    // Open Success Modal
+    openSuccessModal(savedAthlete);
+  } catch (err) {
+    console.error('Error registrando atleta:', err);
+    showToast('⚠️ Ocurrió un error al guardar el registro');
+  } finally {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = originalBtnHtml;
+    }
+  }
 }
 
 // Success Modal
@@ -1588,13 +1638,16 @@ async function handleEditFormSubmit(e) {
   };
 
   if (window.ABCSupabase) {
-    await window.ABCSupabase.updateAthlete(id, updatedAthlete);
+    const res = await window.ABCSupabase.updateAthlete(id, updatedAthlete);
+    if (res && !res.success) {
+      console.warn('Advertencia al actualizar en la nube:', res.error);
+    }
   }
   state.athletes[index] = updatedAthlete;
   saveAthletes();
   renderAll();
   closeAllModals();
-  showToast(`✅ Atleta ${updatedAthlete.id} (${updatedAthlete.nombres}) actualizado con éxito`);
+  showToast(`✅ Atleta ${updatedAthlete.id} (${updatedAthlete.nombres}) guardado en la nube`);
 }
 
 window.resetAllFilters = function(notify = true) {
