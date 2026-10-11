@@ -127,6 +127,17 @@ body::before {
 /* ==========================================================================
    HEADER & NAVBAR
    ========================================================================== */
+@keyframes headerFadeInUp {
+  0% {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .header-glass {
   background: var(--glass-bg);
   backdrop-filter: blur(16px);
@@ -144,6 +155,7 @@ body::before {
   position: sticky;
   top: 1rem;
   z-index: 100;
+  animation: headerFadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .brand-section {
@@ -154,7 +166,7 @@ body::before {
   color: inherit;
 }
 
-/* Logo Circular ABC Caripito Aumentado Significativamente */
+/* Logo Circular ABC Caripito */
 .brand-logo-wrap {
   position: relative;
   width: 96px;
@@ -172,8 +184,8 @@ body::before {
 }
 
 .brand-logo-wrap:hover {
-  transform: scale(1.06);
-  box-shadow: 0 0 35px rgba(255, 255, 255, 0.9), 0 8px 22px rgba(0, 0, 0, 0.55);
+  transform: scale(1.05);
+  box-shadow: 0 0 32px rgba(255, 255, 255, 0.9), 0 8px 22px rgba(0, 0, 0, 0.55);
 }
 
 .brand-logo-img {
@@ -220,17 +232,17 @@ body::before {
   display: flex;
   align-items: center;
   gap: 0.45rem;
-  background: #081534 !important; /* Fondo azul oscuro */
+  background: #081534 !important;
   padding: 0.45rem 0.6rem;
   border-radius: 14px;
-  border: 2px solid #ffffff !important; /* Recuadro con bordes blancos */
+  border: 2px solid #ffffff !important;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4), inset 0 0 10px rgba(255, 255, 255, 0.05);
   flex-wrap: wrap;
 }
 
 .nav-tab-btn {
   background: transparent;
-  color: #ffffff !important; /* Letras de color blanco */
+  color: #ffffff !important;
   border: 1.5px solid transparent;
   padding: 0.6rem 1.15rem;
   border-radius: 10px;
@@ -241,7 +253,7 @@ body::before {
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
-  transition: all var(--transition-fast);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, border-color 0.2s ease;
   white-space: nowrap;
   letter-spacing: 0.2px;
 }
@@ -250,7 +262,8 @@ body::before {
   color: #ffffff !important;
   background: rgba(255, 255, 255, 0.18);
   border-color: rgba(255, 255, 255, 0.5);
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
 }
 
 .nav-tab-btn.active {
@@ -261,7 +274,7 @@ body::before {
 }
 
 /* ==========================================================================
-   HEADER ACTIONS & CONTROLS (Desktop & Base)
+   HEADER ACTIONS & CONTROLS
    ========================================================================== */
 .header-actions {
   display: flex;
@@ -283,10 +296,16 @@ body::before {
   font-weight: 600;
   color: #ffffff;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  transition: all var(--transition-fast);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
   user-select: none;
   cursor: help;
   text-transform: capitalize;
+}
+
+.cloud-status-badge:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px rgba(0, 210, 255, 0.25);
+  border-color: rgba(0, 210, 255, 0.6);
 }
 
 .action-btn-icon-wrap {
@@ -350,7 +369,7 @@ body::before {
   font-size: 0.82rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
   white-space: nowrap;
   text-transform: capitalize;
 }
@@ -359,7 +378,7 @@ body::before {
   background: var(--abc-orange-bright);
   color: #ffffff;
   box-shadow: 0 0 16px rgba(255, 107, 0, 0.45);
-  transform: translateY(-1px);
+  transform: translateY(-2px);
 }
 
 .admin-active-badge {
@@ -377,6 +396,11 @@ body::before {
   text-transform: capitalize;
   box-shadow: 0 0 16px rgba(16, 185, 129, 0.35);
   white-space: nowrap;
+  transition: transform 0.2s ease;
+}
+
+.admin-active-badge:hover {
+  transform: translateY(-2px);
 }
 
 .btn-admin-logout {
@@ -411,6 +435,11 @@ body::before {
   font-weight: 600;
   text-transform: capitalize;
   white-space: nowrap;
+  transition: transform 0.2s ease;
+}
+
+.rep-mode-badge:hover {
+  transform: translateY(-2px);
 }
 
 /* Share Link Button */
@@ -426,7 +455,7 @@ body::before {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  transition: all var(--transition-fast);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
   white-space: nowrap;
   text-transform: capitalize;
 }
@@ -464,9 +493,9 @@ body::before {
 }
 
 .stat-card {
-  background: #ffffff !important; /* Fondo claro (bg-white / bg-slate-100) */
-  border-radius: 18px !important; /* rounded-2xl */
-  padding: 0.9rem 1rem 0.9rem 3.4rem !important; /* Espacio para pestaña sobresaliente */
+  background: #ffffff !important;
+  border-radius: 18px !important;
+  padding: 0.9rem 1rem 0.9rem 3.4rem !important;
   box-shadow: 0 12px 28px -4px rgba(0, 0, 0, 0.4), 0 4px 10px -2px rgba(0, 0, 0, 0.2) !important;
   border: 1.5px solid #e2e8f0 !important;
   display: flex !important;
@@ -474,7 +503,7 @@ body::before {
   justify-content: space-between !important;
   gap: 0.65rem !important;
   position: relative !important;
-  overflow: visible !important; /* Permite que la lengüeta sobresalga por el lateral */
+  overflow: visible !important;
   min-height: 80px;
   transition: transform var(--transition-smooth), box-shadow var(--transition-smooth), border-color var(--transition-fast) !important;
 }
@@ -496,20 +525,20 @@ body::before {
 /* 1. Etiqueta / Pestaña del Número (Sobresaliente en la Esquina Izquierda) */
 .stat-badge-tab {
   position: absolute !important;
-  left: -14px !important; /* Sobresale hacia afuera por el borde izquierdo */
+  left: -14px !important;
   top: 50% !important;
   transform: translateY(-50%) !important;
   min-width: 52px;
   min-height: 52px;
-  border-radius: 14px !important; /* rounded-xl */
+  border-radius: 14px !important;
   padding: 0.35rem 0.55rem !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
   text-align: center;
-  color: #ffffff !important; /* text-white */
+  color: #ffffff !important;
   font-family: var(--font-heading);
-  font-size: 1.65rem !important; /* text-2xl font-extrabold */
+  font-size: 1.65rem !important;
   font-weight: 900 !important;
   line-height: 1;
   letter-spacing: -0.5px;
@@ -536,17 +565,17 @@ body::before {
 
 .stat-title {
   font-family: var(--font-heading) !important;
-  font-size: 1.08rem !important; /* text-lg */
-  font-weight: 800 !important; /* font-bold */
+  font-size: 1.08rem !important;
+  font-weight: 800 !important;
   line-height: 1.2 !important;
   letter-spacing: -0.2px;
 }
 
 /* 3. Subtexto de Acción: Reducido a text-xs, color negro/gris oscuro */
 .stat-hint {
-  font-size: 0.72rem !important; /* text-xs / text-[11px] */
-  font-weight: 800 !important; /* font-semibold / font-bold */
-  color: #0f172a !important; /* text-black / text-gray-900 */
+  font-size: 0.72rem !important;
+  font-weight: 800 !important;
+  color: #0f172a !important;
   text-transform: uppercase !important;
   letter-spacing: 0.3px !important;
   display: flex !important;
@@ -592,11 +621,11 @@ body::before {
   border: 2.5px solid #10b981 !important;
 }
 .badge-tab-green {
-  background: linear-gradient(135deg, #10b981, #059669) !important; /* bg-emerald-600 */
+  background: linear-gradient(135deg, #10b981, #059669) !important;
   box-shadow: 0 8px 16px rgba(16, 185, 129, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.4) !important;
 }
 .title-green {
-  color: #059669 !important; /* text-emerald-600 font-bold text-lg */
+  color: #059669 !important;
 }
 .icon-wrap-green {
   color: #059669 !important;
@@ -614,11 +643,11 @@ body::before {
   border: 2.5px solid #2563eb !important;
 }
 .badge-tab-blue {
-  background: linear-gradient(135deg, #3b82f6, #1d4ed8) !important; /* bg-blue-600 */
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8) !important;
   box-shadow: 0 8px 16px rgba(37, 99, 235, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.4) !important;
 }
 .title-blue {
-  color: #2563eb !important; /* text-blue-600 font-bold text-lg */
+  color: #2563eb !important;
 }
 .icon-wrap-blue {
   color: #2563eb !important;
@@ -636,11 +665,11 @@ body::before {
   border: 2.5px solid #f97316 !important;
 }
 .badge-tab-orange {
-  background: linear-gradient(135deg, #f97316, #dc2626) !important; /* bg-red-500 / bg-amber-500 */
+  background: linear-gradient(135deg, #f97316, #dc2626) !important;
   box-shadow: 0 8px 16px rgba(220, 38, 38, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.4) !important;
 }
 .title-orange {
-  color: #dc2626 !important; /* text-red-600 / text-amber-600 font-bold text-lg */
+  color: #dc2626 !important;
 }
 .icon-wrap-orange {
   color: #dc2626 !important;
@@ -658,11 +687,11 @@ body::before {
   border: 2.5px solid #8b5cf6 !important;
 }
 .badge-tab-purple {
-  background: linear-gradient(135deg, #a855f7, #6b21a8) !important; /* bg-purple-600 / bg-fuchsia-600 */
+  background: linear-gradient(135deg, #a855f7, #6b21a8) !important;
   box-shadow: 0 8px 16px rgba(124, 58, 237, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.4) !important;
 }
 .title-purple {
-  color: #7c3aed !important; /* text-purple-600 font-bold text-lg */
+  color: #7c3aed !important;
 }
 .icon-wrap-purple {
   color: #7c3aed !important;
@@ -680,19 +709,98 @@ body::before {
 }
 
 /* ==========================================================================
+   ANIMACIONES: Shimmer / Light Sweep en Tarjetas de Métricas
+   ========================================================================== */
+
+/* Shimmer overlay pseudo-element — barrido de brillo temático continuo */
+.stat-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 16px;
+  pointer-events: none;
+  z-index: 1;
+  background: linear-gradient(
+    105deg,
+    transparent 30%,
+    var(--shimmer-color, rgba(255, 255, 255, 0.12)) 45%,
+    var(--shimmer-color, rgba(255, 255, 255, 0.12)) 55%,
+    transparent 70%
+  );
+  background-size: 250% 100%;
+  animation: shimmerSweep 3.5s ease-in-out infinite;
+  opacity: 0.85;
+}
+
+/* Colores de shimmer temáticos por tarjeta */
+.stat-card-green {
+  --shimmer-color: rgba(16, 185, 129, 0.15);
+}
+.stat-card-blue {
+  --shimmer-color: rgba(37, 99, 235, 0.15);
+}
+.stat-card-orange {
+  --shimmer-color: rgba(239, 68, 68, 0.13);
+}
+.stat-card-purple {
+  --shimmer-color: rgba(139, 92, 246, 0.15);
+}
+
+@keyframes shimmerSweep {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Pausa del shimmer en hover para no distraer al usuario */
+.stat-card-interactive:hover::after {
+  animation-play-state: paused;
+  opacity: 0.4;
+}
+
+/* ==========================================================================
+   ANIMACIÓN: Respiración / Pulso Sutil del Logo ABC Caripito
+   ========================================================================== */
+@keyframes pulseLogo {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 25px rgba(255, 255, 255, 0.7), 0 6px 18px rgba(0, 0, 0, 0.45);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 0 38px rgba(255, 255, 255, 0.95), 0 0 55px rgba(255, 107, 0, 0.25), 0 8px 22px rgba(0, 0, 0, 0.5);
+  }
+}
+
+.brand-logo-wrap {
+  animation: pulseLogo 4s ease-in-out infinite;
+}
+
+/* Detener pulso en hover (el hover ya tiene su propio transform) */
+.brand-logo-wrap:hover {
+  animation-play-state: paused;
+}
+
+/* ==========================================================================
    VIEWS CONTAINER & TRANSITIONS
    ========================================================================== */
 .view-container {
   display: none;
-  animation: fadeIn 0.35s ease-out forwards;
+  animation: viewFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .view-container.active {
   display: block;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(12px); }
+@keyframes viewFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
@@ -2344,31 +2452,32 @@ body::before {
     line-height: 1.2;
   }
 
-  /* Header Actions Bar (Grid fija de 3 columnas - 100% w-full sin desbordamiento) */
+  /* Header Actions Bar (3 columnas: laterales compactas, centro prioritario) */
   .header-actions {
     width: 100% !important;
     display: grid !important;
-    grid-template-columns: repeat(3, 1fr) !important;
-    gap: 0.375rem !important; /* gap-1.5 */
+    grid-template-columns: auto 1fr auto !important;
+    gap: 0.3rem !important;
     box-sizing: border-box !important;
-    align-items: stretch !important;
+    align-items: center !important;
   }
 
-  /* Columna 1: Indicador Nube */
+  /* Columna 1: Indicador Nube — compacto como badge/icono */
   .cloud-status-badge {
-    width: 100% !important;
+    width: auto !important;
     min-width: 0 !important;
     height: auto !important;
-    min-height: 48px !important;
-    display: flex !important;
-    flex-direction: column !important;
+    min-height: 40px !important;
+    display: inline-flex !important;
+    flex-direction: row !important;
     align-items: center !important;
     justify-content: center !important;
     text-align: center !important;
-    padding: 0.45rem 0.2rem !important; /* py-2 px-1 */
+    padding: 0.3rem 0.5rem !important;
     border-radius: 10px !important;
     box-sizing: border-box !important;
     border: 1.5px solid rgba(148, 163, 184, 0.4) !important;
+    gap: 0.25rem !important;
   }
 
   .cloud-status-badge .action-btn-icon-wrap {
@@ -2380,12 +2489,12 @@ body::before {
 
   .cloud-status-badge .cloud-label {
     display: block !important;
-    font-size: 11px !important;
+    font-size: 10px !important;
     font-weight: 600 !important;
     color: #ffffff !important;
     text-transform: capitalize !important;
     line-height: 1.15 !important;
-    margin-top: 2px !important;
+    margin-top: 0 !important;
     white-space: nowrap !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
@@ -2393,7 +2502,7 @@ body::before {
   }
 
   .cloud-status-badge .cloud-icon {
-    font-size: 1.05rem !important;
+    font-size: 0.9rem !important;
     line-height: 1 !important;
   }
 
@@ -2401,49 +2510,52 @@ body::before {
     position: absolute !important;
     top: -2px !important;
     right: -4px !important;
-    width: 7px !important;
-    height: 7px !important;
+    width: 6px !important;
+    height: 6px !important;
   }
 
-  /* Columna 2: Auth Role Group */
+  /* Columna 2: Auth Role Group — espacio prioritario y amplio */
   .auth-role-group {
     width: 100% !important;
     min-width: 0 !important;
     display: flex !important;
-    align-items: stretch !important;
+    align-items: center !important;
+    justify-content: center !important;
     box-sizing: border-box !important;
   }
 
   .btn-admin-auth {
     width: 100% !important;
     min-width: 0 !important;
-    min-height: 48px !important;
+    min-height: 40px !important;
     display: flex !important;
-    flex-direction: column !important;
+    flex-direction: row !important;
     align-items: center !important;
     justify-content: center !important;
     text-align: center !important;
-    padding: 0.45rem 0.2rem !important; /* py-2 px-1 */
+    padding: 0.35rem 0.6rem !important;
     border-radius: 10px !important;
-    font-size: 11px !important;
+    font-size: 0.82rem !important;
     font-weight: 600 !important;
     color: #ffffff !important;
     text-transform: capitalize !important;
     line-height: 1.15 !important;
     box-sizing: border-box !important;
-    gap: 0 !important;
+    gap: 0.3rem !important;
     border: 1.5px solid rgba(255, 107, 0, 0.6) !important;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8) !important;
+    white-space: nowrap !important;
   }
 
   .btn-admin-auth .auth-icon {
-    font-size: 1.05rem !important;
+    font-size: 0.95rem !important;
     line-height: 1 !important;
+    flex-shrink: 0 !important;
   }
 
   .btn-admin-auth .auth-text {
-    font-size: 11px !important;
-    margin-top: 2px !important;
+    font-size: 0.82rem !important;
+    margin-top: 0 !important;
     white-space: nowrap !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
@@ -2452,111 +2564,118 @@ body::before {
   .admin-active-badge {
     width: 100% !important;
     min-width: 0 !important;
-    min-height: 48px !important;
+    min-height: 40px !important;
     display: flex !important;
-    flex-direction: column !important;
+    flex-direction: row !important;
     align-items: center !important;
     justify-content: center !important;
     text-align: center !important;
-    padding: 0.35rem 0.2rem !important;
+    padding: 0.3rem 0.5rem !important;
     border-radius: 10px !important;
-    font-size: 11px !important;
+    font-size: 0.8rem !important;
     font-weight: 600 !important;
     color: #ffffff !important;
     text-transform: capitalize !important;
     line-height: 1.15 !important;
     box-sizing: border-box !important;
-    gap: 0 !important;
+    gap: 0.3rem !important;
     border: 1.5px solid #10b981 !important;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8) !important;
+    white-space: nowrap !important;
   }
 
   .admin-active-badge .shield-icon {
-    font-size: 0.95rem !important;
+    font-size: 0.9rem !important;
     line-height: 1 !important;
+    flex-shrink: 0 !important;
   }
 
   .admin-active-badge .admin-title-text {
-    font-size: 10px !important;
+    font-size: 0.78rem !important;
     line-height: 1 !important;
-    margin-top: 1px !important;
+    margin-top: 0 !important;
     white-space: nowrap !important;
   }
 
   .admin-active-badge .btn-admin-logout {
-    padding: 0.1rem 0.35rem !important;
-    font-size: 9px !important;
-    margin-top: 2px !important;
-    margin-left: 0 !important;
-    border-radius: 4px !important;
+    padding: 0.15rem 0.4rem !important;
+    font-size: 0.7rem !important;
+    margin-top: 0 !important;
+    margin-left: 0.15rem !important;
+    border-radius: 5px !important;
+    flex-shrink: 0 !important;
   }
 
   .rep-mode-badge {
     width: 100% !important;
     min-width: 0 !important;
-    min-height: 48px !important;
+    min-height: 40px !important;
     display: flex !important;
-    flex-direction: column !important;
+    flex-direction: row !important;
     align-items: center !important;
     justify-content: center !important;
     text-align: center !important;
-    padding: 0.45rem 0.2rem !important; /* py-2 px-1 */
+    padding: 0.35rem 0.6rem !important;
     border-radius: 10px !important;
-    font-size: 11px !important;
+    font-size: 0.82rem !important;
     font-weight: 600 !important;
     color: #ffffff !important;
     text-transform: capitalize !important;
     line-height: 1.15 !important;
     box-sizing: border-box !important;
-    gap: 0 !important;
+    gap: 0.3rem !important;
     border: 1.5px solid rgba(0, 210, 255, 0.6) !important;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8) !important;
+    white-space: nowrap !important;
   }
 
   .rep-mode-badge .rep-icon {
-    font-size: 1.05rem !important;
+    font-size: 0.95rem !important;
     line-height: 1 !important;
+    flex-shrink: 0 !important;
   }
 
   .rep-mode-badge .rep-text {
-    font-size: 11px !important;
-    margin-top: 2px !important;
+    font-size: 0.82rem !important;
+    margin-top: 0 !important;
     white-space: nowrap !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
   }
 
-  /* Columna 3: Link Representante */
+  /* Columna 3: Link Representante — compacto como badge */
   .btn-share-link {
-    width: 100% !important;
+    width: auto !important;
     min-width: 0 !important;
-    min-height: 48px !important;
-    display: flex !important;
-    flex-direction: column !important;
+    min-height: 40px !important;
+    display: inline-flex !important;
+    flex-direction: row !important;
     align-items: center !important;
     justify-content: center !important;
     text-align: center !important;
-    padding: 0.45rem 0.2rem !important; /* py-2 px-1 */
+    padding: 0.3rem 0.5rem !important;
     border-radius: 10px !important;
-    font-size: 11px !important;
+    font-size: 10px !important;
     font-weight: 600 !important;
     color: #ffffff !important;
     text-transform: capitalize !important;
     line-height: 1.15 !important;
     box-sizing: border-box !important;
-    gap: 0 !important;
+    gap: 0.25rem !important;
     border: 1.5px solid rgba(0, 210, 255, 0.6) !important;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8) !important;
+    white-space: nowrap !important;
   }
 
   .btn-share-link .share-icon {
-    font-size: 1.05rem !important;
+    font-size: 0.9rem !important;
     line-height: 1 !important;
+    flex-shrink: 0 !important;
   }
 
   .btn-share-link .share-text {
-    font-size: 11px !important;
-    margin-top: 2px !important;
+    font-size: 10px !important;
+    margin-top: 0 !important;
     white-space: nowrap !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
@@ -3205,32 +3324,40 @@ body::before {
   }
 
   .header-actions {
-    gap: 0.25rem !important;
+    gap: 0.2rem !important;
   }
 
   .cloud-status-badge,
+  .btn-share-link {
+    min-height: 36px !important;
+    padding: 0.25rem 0.35rem !important;
+    font-size: 9px !important;
+  }
+
   .btn-admin-auth,
   .admin-active-badge,
-  .rep-mode-badge,
-  .btn-share-link {
-    min-height: 46px !important;
-    padding: 0.4rem 0.15rem !important;
+  .rep-mode-badge {
+    min-height: 36px !important;
+    padding: 0.3rem 0.4rem !important;
   }
 
   .cloud-status-badge .cloud-label,
-  .btn-admin-auth .auth-text,
-  .rep-mode-badge .rep-text,
   .btn-share-link .share-text {
-    font-size: 10px !important;
+    font-size: 9px !important;
+  }
+
+  .btn-admin-auth .auth-text,
+  .rep-mode-badge .rep-text {
+    font-size: 0.75rem !important;
   }
 
   .admin-active-badge .admin-title-text {
-    font-size: 9.5px !important;
+    font-size: 0.7rem !important;
   }
 
   .btn-admin-logout {
     padding: 0.1rem 0.3rem !important;
-    font-size: 8.5px !important;
+    font-size: 0.6rem !important;
   }
 
   /* Ficha en pantallas ultra estrechas */
