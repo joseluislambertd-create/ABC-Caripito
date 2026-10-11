@@ -12,7 +12,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   
   <!-- CSS Stylesheet -->
-  <link rel="stylesheet" href="css/style.css?v=16">
+  <link rel="stylesheet" href="css/style.css?v=19">
   <link rel="icon" type="image/jpeg" href="assets/logo.jpg">
 </head>
 <body>
@@ -45,11 +45,14 @@
         <button class="nav-tab-btn" data-view="ficha-oficial" id="navBtnFichaOficial">
           <span>📄</span> Ficha Oficial
         </button>
+        <button class="nav-tab-btn" data-view="cuerpo-tecnico" id="navBtnCuerpoTecnico">
+          <span>📋</span> Cuerpo Técnico
+        </button>
       </nav>
 
-      <!-- Action Quick Buttons (Grid de 3 Columnas en Móvil) -->
+      <!-- Action Quick Buttons (Barra Superior de 3 Módulos Limpios) -->
       <div class="header-actions">
-        <!-- Columna 1: Indicador de Nube Supabase -->
+        <!-- Módulo 1: Indicador de Nube Supabase -->
         <div class="cloud-status-badge" id="cloudStatusBadge" title="Estado de conexión con la Base de Datos" role="status" tabindex="0">
           <div class="action-btn-icon-wrap">
             <span class="cloud-icon" aria-hidden="true">☁️</span>
@@ -58,7 +61,7 @@
           <span class="cloud-label" id="cloudStatusLabel">Local</span>
         </div>
 
-        <!-- Columna 2: Acceso Directiva / Modo Consulta / Directiva Activa -->
+        <!-- Módulo 2: Acceso Directiva / Estado Administrador Unificado -->
         <div class="auth-role-group" id="authRoleGroup">
           <button class="btn-admin-auth" id="btnOpenAdminAuth" onclick="openAdminAuthModal()" title="Haga clic para desbloquear permisos de directiva">
             <span class="auth-icon">🔐</span>
@@ -77,7 +80,7 @@
           </div>
         </div>
 
-        <!-- Columna 3: Link Representante / QR -->
+        <!-- Módulo 3: Enlace Público para Representantes / QR -->
         <button class="btn-share-link" id="btnOpenShareModal" title="Obtener enlace público y código QR para representantes">
           <span class="share-icon">🔗</span>
           <span class="share-text">Link Rep.</span>
@@ -572,6 +575,82 @@
 
     </section>
 
+    <!-- ======================================================================
+         VISTA 5: CUERPO TÉCNICO Y ENTRENADORES (ABC CARIPITO)
+         ====================================================================== -->
+    <section class="view-container" id="view-cuerpo-tecnico">
+      
+      <!-- Banner Hero del Cuerpo Técnico con KPIs compactos -->
+      <div class="staff-hero-banner">
+        <div class="staff-hero-info">
+          <div class="form-header-badge" style="margin-bottom:0.4rem;">📋 Staff Profesional & Formativo</div>
+          <h2 class="staff-hero-title">Cuerpo Técnico ABC Caripito</h2>
+          <p class="staff-hero-subtitle">
+            Entrenadores federados, preparadores físicos, especialistas y delegados dedicados a la formación integral y desarrollo deportivo de los atletas.
+          </p>
+        </div>
+
+        <div class="staff-kpi-group">
+          <div class="staff-kpi-chip">
+            <span class="staff-kpi-val" id="statStaffTotal">4</span>
+            <span class="staff-kpi-lbl">Total Personal</span>
+          </div>
+          <div class="staff-kpi-chip">
+            <span class="staff-kpi-val" id="statStaffPrincipal">1</span>
+            <span class="staff-kpi-lbl">Entr. Principales</span>
+          </div>
+          <div class="staff-kpi-chip">
+            <span class="staff-kpi-val" id="statStaffAsistentes">1</span>
+            <span class="staff-kpi-lbl">Asistentes</span>
+          </div>
+          <div class="staff-kpi-chip">
+            <span class="staff-kpi-val" id="statStaffEspecialistas">2</span>
+            <span class="staff-kpi-lbl">Especialistas</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Barra de Filtros y Búsqueda -->
+      <div class="table-toolbar" style="margin-top: 1.5rem;">
+        <div class="search-box-wrap">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="staffSearchInput" class="search-input" placeholder="Buscar por Nombre, Cédula, Rol o Categoría..." />
+        </div>
+
+        <div class="toolbar-actions">
+          <select id="filterStaffRole" class="filter-select" title="Filtrar por Rol">
+            <option value="all">Todos los Roles</option>
+            <option value="Entrenador Principal">Entrenador Principal</option>
+            <option value="Entrenador Asistente">Entrenador Asistente</option>
+            <option value="Preparador Físico">Preparador Físico</option>
+            <option value="Delegada de Equipo">Delegado(a) de Equipo</option>
+            <option value="Fisioterapeuta">Fisioterapeuta</option>
+          </select>
+
+          <select id="filterStaffCategory" class="filter-select" title="Filtrar por Categoría">
+            <option value="all">Todas las Categorías</option>
+            <option value="Sub-8">Sub-8</option>
+            <option value="Sub-10">Sub-10</option>
+            <option value="Sub-12">Sub-12</option>
+            <option value="Sub-14">Sub-14</option>
+            <option value="Sub-16">Sub-16</option>
+            <option value="Sub-18">Sub-18</option>
+            <option value="Libres">Libres</option>
+          </select>
+
+          <button class="btn-action-primary" id="btnOpenStaffModal" onclick="openNewStaffModal()" title="Registrar nuevo integrante del cuerpo técnico">
+            <span>➕</span> Registrar Miembro
+          </button>
+        </div>
+      </div>
+
+      <!-- Grid de Tarjetas del Cuerpo Técnico -->
+      <div class="staff-cards-grid" id="staffCardsGrid">
+        <!-- Renderizado dinámicamente -->
+      </div>
+
+    </section>
+
   </div>
 
   <!-- ========================================================================
@@ -901,6 +980,127 @@
   </div>
 
   <!-- ========================================================================
+       MODAL DE REGISTRO / EDICIÓN DE CUERPO TÉCNICO
+       ======================================================================== -->
+  <div class="modal-overlay" id="modalStaffMember">
+    <div class="modal-card modal-card-large">
+      <button class="btn-modal-close" onclick="closeAllModals()">&times;</button>
+      <div class="modal-header-styled" style="align-items: center; gap: 1rem;">
+        <div class="staff-photo-avatar-uploader" id="staffPhotoAvatarWrapper" onclick="document.getElementById('staffFotoInput').click()" title="Haga clic para subir o tomar una fotografía">
+          <input type="file" id="staffFotoInput" accept="image/*" style="display:none;" />
+          <img id="staffPhotoPreviewImg" src="" alt="Foto Miembro" style="display:none;" />
+          <div id="staffPhotoPlaceholderIcon" class="modal-header-icon-wrap" style="background:rgba(0,210,255,0.15);color:var(--abc-cyan-bright);border-color:rgba(0,210,255,0.4);font-size:1.6rem;cursor:pointer;">
+            📋
+          </div>
+          <div class="staff-photo-camera-badge" title="Cargar / Cambiar foto">📷</div>
+        </div>
+        <div style="flex: 1;">
+          <h3 class="modal-title" id="staffModalTitle">Registrar Miembro del Cuerpo Técnico</h3>
+          <p class="modal-desc" style="margin-bottom:0.4rem;" id="staffModalSubtitle">Complete los datos del entrenador o especialista de ABC Caripito.</p>
+          <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
+            <button type="button" class="btn-staff-upload-chip" id="btnTriggerStaffUpload" onclick="document.getElementById('staffFotoInput').click()">
+              <span>📷</span> Seleccionar Fotografía
+            </button>
+            <button type="button" class="btn-staff-remove-photo" id="btnRemoveStaffPhoto" onclick="removeStaffPhoto()" style="display:none;">
+              ✕ Quitar foto
+            </button>
+            <span id="staffPhotoStatusText" style="font-size:0.75rem;color:var(--abc-silver-muted);">JPG / PNG o Cámara</span>
+          </div>
+        </div>
+      </div>
+
+      <form id="staffMemberForm" onsubmit="handleStaffFormSubmit(event)" style="margin-top:1.25rem;">
+        <input type="hidden" id="staffEditId" value="" />
+        <input type="hidden" id="staffFotoData" value="" />
+
+        <!-- Fila 1: Nombres y Apellidos -->
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label" for="staffNombres">Nombres <span class="required">*</span></label>
+            <input type="text" id="staffNombres" class="form-input" placeholder="Ej. José Luis" required />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="staffApellidos">Apellidos <span class="required">*</span></label>
+            <input type="text" id="staffApellidos" class="form-input" placeholder="Ej. Lambert" required />
+          </div>
+        </div>
+
+        <!-- Fila 2: Cédula, Teléfono y Correo -->
+        <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin-top: 1rem;">
+          <div class="form-group">
+            <label class="form-label" for="staffCedula">Cédula de Identidad <span class="required">*</span></label>
+            <input type="text" id="staffCedula" class="form-input" placeholder="Ej. V-15.345.678" required />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="staffTelefono">Teléfono / WhatsApp <span class="required">*</span></label>
+            <input type="text" id="staffTelefono" class="form-input" placeholder="Ej. 0414-1234567" required />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="staffEmail">Correo Electrónico (Opcional)</label>
+            <input type="email" id="staffEmail" class="form-input" placeholder="Ej. coach@abccaripito.com" />
+          </div>
+        </div>
+
+        <!-- Fila 3: Rol / Cargo y Estatus -->
+        <div class="form-grid" style="grid-template-columns: 2fr 1fr; margin-top: 1rem;">
+          <div class="form-group">
+            <label class="form-label" for="staffRol">Rol / Cargo en la Academia <span class="required">*</span></label>
+            <select id="staffRol" class="form-input" required>
+              <option value="Entrenador Principal">Entrenador Principal</option>
+              <option value="Entrenador Asistente">Entrenador Asistente</option>
+              <option value="Preparador Físico">Preparador Físico</option>
+              <option value="Delegada de Equipo">Delegado(a) de Equipo</option>
+              <option value="Fisioterapeuta">Fisioterapeuta</option>
+              <option value="Estadístico / Asistente Técnico">Estadístico / Asistente Técnico</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="staffEstatus">Estatus</label>
+            <select id="staffEstatus" class="form-input">
+              <option value="Activo">Activo</option>
+              <option value="En Permiso">En Permiso</option>
+              <option value="Inactivo">Inactivo</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Fila 4: Categorías que Atiende (Chips Interactivos) -->
+        <div class="form-group" style="margin-top: 1rem;">
+          <label class="form-label">Categorías que Atiende <span class="required">*</span> (Seleccione una o varias)</label>
+          <div class="staff-cat-chips-container" id="staffCategoryChips">
+            <span class="staff-cat-chip-select" data-cat="Sub-8">Sub-8</span>
+            <span class="staff-cat-chip-select" data-cat="Sub-10">Sub-10</span>
+            <span class="staff-cat-chip-select" data-cat="Sub-12">Sub-12</span>
+            <span class="staff-cat-chip-select" data-cat="Sub-14">Sub-14</span>
+            <span class="staff-cat-chip-select" data-cat="Sub-16">Sub-16</span>
+            <span class="staff-cat-chip-select" data-cat="Sub-18">Sub-18</span>
+            <span class="staff-cat-chip-select" data-cat="Libres">Libres</span>
+            <span class="staff-cat-chip-select" data-cat="Todas las Categorías">Todas las Categorías</span>
+          </div>
+          <input type="hidden" id="staffCategoriasValue" value="" />
+        </div>
+
+        <!-- Fila 5: Experiencia / Certificaciones / Notas (Ancho Completo) -->
+        <div class="form-group" style="margin-top: 1rem;">
+          <label class="form-label" for="staffExperiencia">Experiencia / Certificaciones / Trayectoria / Notas</label>
+          <textarea id="staffExperiencia" class="form-input" rows="3" placeholder="Ej. Entrenador Federado Nivel 1 • Especialista en formación y fundamentación básica en categorías formativas..."></textarea>
+        </div>
+
+        <div style="display:flex;gap:0.75rem;justify-content:flex-end;margin-top:1.75rem;">
+          <button type="button" class="btn-action-outline" onclick="closeAllModals()">Cancelar</button>
+          <button type="submit" class="btn-action-primary" style="padding:0.65rem 1.6rem;" id="btnSubmitStaffForm">
+            <span>💾</span> Guardar Miembro Técnico
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================================================
        MODAL DE AUTENTICACIÓN DIRECTIVA / ADMINISTRADOR
        ======================================================================== -->
   <div class="modal-overlay" id="modalAdminAuth">
@@ -940,10 +1140,10 @@
 
   <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/config.js?v=3"></script>
-  <script src="js/supabaseClient.js?v=3"></script>
+  <script src="js/config.js?v=4"></script>
+  <script src="js/supabaseClient.js?v=4"></script>
   <script src="js/logo.js?v=2"></script>
-  <script src="js/initialData.js?v=3"></script>
-  <script src="js/app.js?v=8"></script>
+  <script src="js/initialData.js?v=4"></script>
+  <script src="js/app.js?v=10"></script>
 </body>
 </html>

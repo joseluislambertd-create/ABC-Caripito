@@ -5,6 +5,7 @@
 
 (function () {
   const LOCAL_STORAGE_KEY = 'ABC_CARIPITO_ATHLETES_DB_V1';
+  const STAFF_STORAGE_KEY = 'ABC_CARIPITO_STAFF_DB_V1';
   let supabaseInstance = null;
   let isConnected = false;
   let activeRealtimeChannel = null;
@@ -140,6 +141,65 @@
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(athletes));
     } catch (e) {
       console.error('Error guardando en LocalStorage', e);
+    }
+  }
+
+  // Mapear campos de objeto JavaScript de cuerpo técnico a columnas PostgreSQL
+  function toStaffDbModel(staff) {
+    return {
+      id: staff.id,
+      fecha_ingreso: staff.fechaIngreso || new Date().toISOString().split('T')[0],
+      nombres: (staff.nombres || '').trim(),
+      apellidos: (staff.apellidos || '').trim(),
+      cedula: (staff.cedula || '').trim(),
+      telefono: (staff.telefono || '').trim(),
+      email: (staff.email || '').trim() || null,
+      rol: staff.rol || 'Entrenador Asistente',
+      categorias: staff.categorias || 'Todas las Categorías',
+      experiencia: (staff.experiencia || '').trim() || null,
+      foto: staff.foto || null,
+      estatus: staff.estatus || 'Activo'
+    };
+  }
+
+  // Mapear columnas PostgreSQL de cuerpo técnico a objeto JavaScript
+  function fromStaffDbModel(row) {
+    return {
+      id: row.id,
+      fechaIngreso: row.fecha_ingreso,
+      nombres: row.nombres,
+      apellidos: row.apellidos,
+      cedula: row.cedula,
+      telefono: row.telefono,
+      email: row.email || '',
+      rol: row.rol,
+      categorias: row.categorias,
+      experiencia: row.experiencia || '',
+      foto: row.foto || null,
+      estatus: row.estatus || 'Activo'
+    };
+  }
+
+  // Obtener cuerpo técnico desde LocalStorage
+  function getLocalStaff() {
+    try {
+      const saved = localStorage.getItem(STAFF_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      console.error('Error leyendo LocalStorage para staff', e);
+    }
+    return window.INITIAL_CUERPO_TECNICO ? [...window.INITIAL_CUERPO_TECNICO] : [];
+  }
+
+  // Guardar cuerpo técnico en LocalStorage
+  function saveLocalStaff(staffList) {
+    try {
+      localStorage.setItem(STAFF_STORAGE_KEY, JSON.stringify(staffList));
+    } catch (e) {
+      console.error('Error guardando staff en LocalStorage', e);
     }
   }
 
@@ -348,7 +408,7 @@
       return { success: true, isLocalOnly: true };
     },
 
-    // 5. Suscripción en Tiempo Real (Realtime Listener)
+    // 5. Suscripción en Tiempo Real (Realtime Listener - Atletas y Cuerpo Técnico)
     subscribeRealtime: function (onChangeCallback) {
       const client = getSupabaseClient();
       if (!client || !isConnected || typeof onChangeCallback !== 'function') {
@@ -361,18 +421,26 @@
         }
 
         activeRealtimeChannel = client
-          .channel('public:atletas')
+          .channel('public:abc-realtime')
           .on(
             'postgres_changes',
             { event: '*', schema: 'public', table: 'atletas' },
             (payload) => {
-              console.log('⚡ [Realtime Supabase] Evento recibido en vivo:', payload.eventType, payload);
-              onChangeCallback(payload);
+              console.log('⚡ [Realtime Supabase] Evento en atletas:', payload.eventType, payload);
+              onChangeCallback({ table: 'atletas', ...payload });
+            }
+          )
+          .on(
+            'postgres_changes',
+            { event: '*', schema: 'public', table: 'cuerpo_tecnico' },
+            (payload) => {
+              console.log('⚡ [Realtime Supabase] Evento en cuerpo_tecnico:', payload.eventType, payload);
+              onChangeCallback({ table: 'cuerpo_tecnico', ...payload });
             }
           )
           .subscribe((status, err) => {
             if (status === 'SUBSCRIBED') {
-              console.log('🟢 [Realtime Supabase] Canal conectado en tiempo real.');
+              console.log('🟢 [Realtime Supabase] Canal conectado en tiempo real (atletas + cuerpo_tecnico).');
             } else if (status === 'CHANNEL_ERROR') {
               console.warn('⚠️ [Realtime Supabase] Error en canal Realtime:', err);
             }
@@ -383,6 +451,156 @@
         console.warn('⚠️ Error al establecer suscripción Realtime en Supabase:', err);
         return null;
       }
+    },
+
+    // 6. Obtener todo el cuerpo técnico (READ)
+    fetchStaff: async function () {
+      const client = getSupabaseClient();
+      if (client && isConnected) {
+        try {
+          const { data, error } = await client
+            .from('cuerpo_tecnico')
+            .select('*')
+            .order('id', { ascending: true });
+
+          if (error) {
+            console.error('⚠️ [Supabase SELECT cuerpo_tecnico Error]:', error);
+            return getLocalStaff();
+          }
+
+          if (data && Array.isArray(data)) {
+            const mapped = data.map(fromStaffDbModel);
+            saveLocalStaff(mapped);
+            console.log(`✅ [Supabase] ${mapped.length} miembros del cuerpo técnico sincronizados.`);
+            return mapped;
+          }
+        } catch (err) {
+          console.error('⚠️ [Supabase SELECT cuerpo_tecnico Excepción]:', err);
+          return getLocalStaff();
+        }
+      }
+      return getLocalStaff();
+    },
+
+    // 7. Guardar nuevo miembro del cuerpo técnico (INSERT / UPSERT)
+    saveStaffMember: async function (staffData) {
+      const client = getSupabaseClient();
+
+      if (!staffData.id) {
+        const local = getLocalStaff();
+        const maxNum = local.reduce((max, s) => {
+          const num = parseInt((s.id || '').replace(/\D/g, ''), 10);
+          return !isNaN(num) && num > max ? num : max;
+        }, 0);
+        staffData.id = `CT-${String(maxNum + 1).padStart(3, '0')}`;
+      }
+
+      if (client && isConnected) {
+        try {
+          const dbRow = toStaffDbModel(staffData);
+          const { data, error } = await client
+            .from('cuerpo_tecnico')
+            .upsert(dbRow, { onConflict: 'id' })
+            .select();
+
+          if (error) {
+            console.error('❌ [Supabase UPSERT cuerpo_tecnico Error]:', error);
+            const local = getLocalStaff();
+            const existingIdx = local.findIndex(s => s.id === staffData.id);
+            if (existingIdx !== -1) local[existingIdx] = staffData;
+            else local.push(staffData);
+            saveLocalStaff(local);
+            return { success: true, isLocalOnly: true, data: staffData };
+          }
+
+          const savedItem = data && data[0] ? fromStaffDbModel(data[0]) : staffData;
+          const local = getLocalStaff();
+          const existingIdx = local.findIndex(s => s.id === savedItem.id);
+          if (existingIdx !== -1) local[existingIdx] = savedItem;
+          else local.push(savedItem);
+          saveLocalStaff(local);
+
+          console.log('✅ [Supabase UPSERT cuerpo_tecnico Exitoso]:', savedItem.id);
+          return { success: true, data: savedItem };
+        } catch (err) {
+          console.error('❌ [Supabase UPSERT cuerpo_tecnico Excepción]:', err);
+          const local = getLocalStaff();
+          local.push(staffData);
+          saveLocalStaff(local);
+          return { success: true, isLocalOnly: true, data: staffData };
+        }
+      }
+
+      const local = getLocalStaff();
+      const existingIdx = local.findIndex(s => s.id === staffData.id);
+      if (existingIdx !== -1) local[existingIdx] = staffData;
+      else local.push(staffData);
+      saveLocalStaff(local);
+      return { success: true, isLocalOnly: true, data: staffData };
+    },
+
+    // 8. Actualizar miembro técnico (UPDATE)
+    updateStaffMember: async function (id, updatedFields) {
+      const client = getSupabaseClient();
+      if (client && isConnected) {
+        try {
+          const updatePayload = {};
+          if (updatedFields.nombres !== undefined) updatePayload.nombres = updatedFields.nombres;
+          if (updatedFields.apellidos !== undefined) updatePayload.apellidos = updatedFields.apellidos;
+          if (updatedFields.cedula !== undefined) updatePayload.cedula = updatedFields.cedula;
+          if (updatedFields.telefono !== undefined) updatePayload.telefono = updatedFields.telefono;
+          if (updatedFields.email !== undefined) updatePayload.email = updatedFields.email;
+          if (updatedFields.rol !== undefined) updatePayload.rol = updatedFields.rol;
+          if (updatedFields.categorias !== undefined) updatePayload.categorias = updatedFields.categorias;
+          if (updatedFields.experiencia !== undefined) updatePayload.experiencia = updatedFields.experiencia;
+          if (updatedFields.foto !== undefined) updatePayload.foto = updatedFields.foto;
+          if (updatedFields.estatus !== undefined) updatePayload.estatus = updatedFields.estatus;
+
+          const { error } = await client
+            .from('cuerpo_tecnico')
+            .update(updatePayload)
+            .eq('id', id);
+
+          if (error) {
+            console.error('❌ [Supabase UPDATE cuerpo_tecnico Error]:', error);
+          } else {
+            console.log('✅ [Supabase UPDATE cuerpo_tecnico Exitoso]:', id);
+          }
+        } catch (err) {
+          console.error('❌ [Supabase UPDATE cuerpo_tecnico Excepción]:', err);
+        }
+      }
+
+      const local = getLocalStaff();
+      const idx = local.findIndex(s => s.id === id);
+      if (idx !== -1) {
+        local[idx] = { ...local[idx], ...updatedFields };
+        saveLocalStaff(local);
+      }
+      return { success: true };
+    },
+
+    // 9. Eliminar miembro técnico (DELETE)
+    deleteStaffMember: async function (id) {
+      const client = getSupabaseClient();
+      if (client && isConnected) {
+        try {
+          const { error } = await client
+            .from('cuerpo_tecnico')
+            .delete()
+            .eq('id', id);
+
+          if (error) console.error('❌ [Supabase DELETE cuerpo_tecnico Error]:', error);
+          else console.log('✅ [Supabase DELETE cuerpo_tecnico Exitoso]:', id);
+        } catch (err) {
+          console.error('❌ [Supabase DELETE cuerpo_tecnico Excepción]:', err);
+        }
+      }
+
+      let local = getLocalStaff();
+      local = local.filter(s => s.id !== id);
+      saveLocalStaff(local);
+      return { success: true };
     }
   };
 

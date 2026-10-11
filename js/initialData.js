@@ -200,3 +200,63 @@ window.INITIAL_ATHLETES = [
     "estatus": "Activo"
   }
 ];
+
+window.INITIAL_CUERPO_TECNICO = [
+  {
+    "id": "CT-001",
+    "fechaIngreso": "2024-01-10",
+    "nombres": "José Luis",
+    "apellidos": "Lambert",
+    "cedula": "V-15.345.678",
+    "telefono": "0414-8889911",
+    "email": "coachlambert@abccaripito.com",
+    "rol": "Entrenador Principal",
+    "categorias": "Sub-16, Sub-18, Libres",
+    "experiencia": "Director Técnico ABC Caripito • Entrenador Federado Nivel 2 • 12 años formando talentos",
+    "foto": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80",
+    "estatus": "Activo"
+  },
+  {
+    "id": "CT-002",
+    "fechaIngreso": "2024-02-15",
+    "nombres": "Carlos Rafael",
+    "apellidos": "Ramos Silva",
+    "cedula": "V-18.765.432",
+    "telefono": "0424-9123456",
+    "email": "carlosramos@abccaripito.com",
+    "rol": "Entrenador Asistente",
+    "categorias": "Sub-8, Sub-10, Sub-12, Sub-14",
+    "experiencia": "Especialista en Desarrollo Formativo y Fundamentos Básicos del Baloncesto Menor",
+    "foto": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80",
+    "estatus": "Activo"
+  },
+  {
+    "id": "CT-003",
+    "fechaIngreso": "2024-03-01",
+    "nombres": "Marcos Antonio",
+    "apellidos": "Silva Rivas",
+    "cedula": "V-20.112.233",
+    "telefono": "0412-3456789",
+    "email": "marcosilva@abccaripito.com",
+    "rol": "Preparador Físico",
+    "categorias": "Todas las Categorías",
+    "experiencia": "Licenciado en Educación Física • Acondicionamiento funcional y prevención de lesiones",
+    "foto": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&auto=format&fit=crop&q=80",
+    "estatus": "Activo"
+  },
+  {
+    "id": "CT-004",
+    "fechaIngreso": "2024-03-10",
+    "nombres": "Elena del Carmen",
+    "apellidos": "Gómez Morales",
+    "cedula": "V-17.998.877",
+    "telefono": "0416-7890123",
+    "email": "elenagomez@abccaripito.com",
+    "rol": "Delegada de Equipo",
+    "categorias": "Todas las Categorías",
+    "experiencia": "Coordinación logística, eventos, control de fichajes y enlace directo con representantes",
+    "foto": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&auto=format&fit=crop&q=80",
+    "estatus": "Activo"
+  }
+];
+

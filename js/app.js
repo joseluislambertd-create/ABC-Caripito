@@ -10,7 +10,13 @@ let pendingAdminCallback = null;
 let state = {
   athletes: [],
   selectedAthleteId: null,
-  currentView: 'registro', // 'registro', 'base-datos', 'fichas-pro', 'ficha-oficial', 'impresion'
+  staff: [],
+  selectedStaffId: null,
+  staffSearchQuery: '',
+  staffFilterRole: 'all',
+  staffFilterCategory: 'all',
+  editingStaffId: null,
+  currentView: 'registro', // 'registro', 'base-datos', 'fichas-pro', 'ficha-oficial', 'cuerpo-tecnico', 'impresion'
   isRepresentativeMode: false,
   isAdmin: typeof sessionStorage !== 'undefined' && sessionStorage.getItem('ABC_ADMIN_AUTH') === 'true',
   searchQuery: '',
@@ -19,7 +25,8 @@ let state = {
   filterStatus: 'all',
   filterHealth: 'all',
   activeKpiFilter: null,
-  activePhotoData: null
+  activePhotoData: null,
+  activeStaffPhotoData: null
 };
 
 // Default Sample Photos for fallback
@@ -39,8 +46,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupFormCalculations();
   setupEditCalculations();
   setupLivePreview();
+  initStaffCategoryChips();
+  setupStaffPhotoUploader();
   updateCloudStatusIndicator();
   await loadAthletes();
+  await loadStaff();
   setupRealtimeSync();
 });
 
@@ -117,8 +127,13 @@ function setupRealtimeSync() {
   if (window.ABCSupabase && window.ABCSupabase.isCloudActive()) {
     window.ABCSupabase.subscribeRealtime(async (payload) => {
       console.log('⚡ Recibiendo actualización en tiempo real desde Supabase...', payload);
-      await loadAthletes(true);
-      showToast('⚡ Base de datos sincronizada en tiempo real');
+      if (payload && payload.table === 'cuerpo_tecnico') {
+        await loadStaff(true);
+        showToast('⚡ Cuerpo técnico sincronizado en tiempo real');
+      } else {
+        await loadAthletes(true);
+        showToast('⚡ Base de datos sincronizada en tiempo real');
+      }
     });
   }
 }
@@ -284,7 +299,7 @@ function checkUrlParams() {
     state.isRepresentativeMode = !state.isAdmin;
   }
 
-  if (viewParam && ['base-datos', 'fichas-pro', 'ficha-oficial', 'registro'].includes(viewParam)) {
+  if (viewParam && ['base-datos', 'fichas-pro', 'ficha-oficial', 'cuerpo-tecnico', 'registro'].includes(viewParam)) {
     switchView(viewParam);
   } else {
     switchView('registro');
@@ -473,6 +488,31 @@ function setupEventListeners() {
       }
     });
   }
+
+  // Staff Search & Filter Listeners
+  const staffSearchInput = document.getElementById('staffSearchInput');
+  if (staffSearchInput) {
+    staffSearchInput.addEventListener('input', (e) => {
+      state.staffSearchQuery = e.target.value.toLowerCase().trim();
+      renderStaffGrid();
+    });
+  }
+
+  const filterStaffRole = document.getElementById('filterStaffRole');
+  if (filterStaffRole) {
+    filterStaffRole.addEventListener('change', (e) => {
+      state.staffFilterRole = e.target.value;
+      renderStaffGrid();
+    });
+  }
+
+  const filterStaffCategory = document.getElementById('filterStaffCategory');
+  if (filterStaffCategory) {
+    filterStaffCategory.addEventListener('change', (e) => {
+      state.staffFilterCategory = e.target.value;
+      renderStaffGrid();
+    });
+  }
 }
 
 // Switch Active View
@@ -492,6 +532,7 @@ function switchView(viewName) {
   if (viewName === 'base-datos') renderTable();
   if (viewName === 'fichas-pro') renderCardsGrid();
   if (viewName === 'ficha-oficial') renderFichaOficial();
+  if (viewName === 'cuerpo-tecnico') renderStaffGrid();
 }
 
 // Stats Calculation
@@ -1802,6 +1843,8 @@ function renderAll() {
   renderTable();
   renderCardsGrid();
   renderFichaOficial();
+  renderStaffGrid();
+  updateStaffKPIs();
   updateCardPreview();
 }
 
@@ -1815,3 +1858,472 @@ function showToast(msg) {
     }, 3500);
   }
 }
+
+// ==========================================================================
+// CUERPO TÉCNICO CONTROLLER & RENDERING
+// ==========================================================================
+
+// Default avatar for coaches
+const DEFAULT_COACH_AVATAR = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80';
+
+async function loadStaff(isRealtime = false) {
+  if (window.ABCSupabase) {
+    state.staff = await window.ABCSupabase.fetchStaff();
+  } else {
+    const saved = localStorage.getItem('ABC_CARIPITO_STAFF_DB_V1');
+    if (saved) {
+      try {
+        state.staff = JSON.parse(saved);
+      } catch (e) {
+        state.staff = window.INITIAL_CUERPO_TECNICO ? [...window.INITIAL_CUERPO_TECNICO] : [];
+      }
+    } else {
+      state.staff = window.INITIAL_CUERPO_TECNICO ? [...window.INITIAL_CUERPO_TECNICO] : [];
+    }
+  }
+
+  updateStaffKPIs();
+  renderStaffGrid();
+}
+
+function updateStaffKPIs() {
+  const staff = state.staff || [];
+  const total = staff.length;
+  const principales = staff.filter(s => (s.rol || '').toLowerCase().includes('principal')).length;
+  const asistentes = staff.filter(s => (s.rol || '').toLowerCase().includes('asistente')).length;
+  const especialistas = total - principales - asistentes;
+
+  const elTotal = document.getElementById('statStaffTotal');
+  const elPrinc = document.getElementById('statStaffPrincipal');
+  const elAsis = document.getElementById('statStaffAsistentes');
+  const elEsp = document.getElementById('statStaffEspecialistas');
+
+  if (elTotal) elTotal.innerText = total;
+  if (elPrinc) elPrinc.innerText = principales;
+  if (elAsis) elAsis.innerText = asistentes;
+  if (elEsp) elEsp.innerText = Math.max(0, especialistas);
+}
+
+function getRoleBadgeClass(rol) {
+  const r = (rol || '').toLowerCase();
+  if (r.includes('principal')) return 'principal';
+  if (r.includes('asistente')) return 'asistente';
+  if (r.includes('físico') || r.includes('fisico')) return 'fisico';
+  if (r.includes('delegad')) return 'delegado';
+  if (r.includes('fisiot')) return 'fisio';
+  return 'general';
+}
+
+function renderStaffGrid() {
+  const container = document.getElementById('staffCardsGrid');
+  if (!container) return;
+
+  const query = (state.staffSearchQuery || '').toLowerCase();
+  const filterRole = state.staffFilterRole || 'all';
+  const filterCat = state.staffFilterCategory || 'all';
+
+  const filtered = (state.staff || []).filter(s => {
+    const fullName = `${s.nombres} ${s.apellidos}`.toLowerCase();
+    const doc = (s.cedula || '').toLowerCase();
+    const rol = (s.rol || '').toLowerCase();
+    const cats = (s.categorias || '').toLowerCase();
+
+    const matchesSearch = !query || 
+      fullName.includes(query) || 
+      doc.includes(query) || 
+      rol.includes(query) || 
+      cats.includes(query);
+
+    const matchesRole = filterRole === 'all' || s.rol === filterRole;
+
+    const matchesCategory = filterCat === 'all' || 
+      cats.includes(filterCat.toLowerCase()) || 
+      cats.includes('todas');
+
+    return matchesSearch && matchesRole && matchesCategory;
+  });
+
+  if (filtered.length === 0) {
+    container.innerHTML = `
+      <div style="grid-column: 1 / -1; text-align: center; padding: 3.5rem 1rem; background: var(--glass-bg); border: 1px dashed var(--glass-border); border-radius: 16px;">
+        <div style="font-size: 2.2rem; margin-bottom: 0.5rem;">📋</div>
+        <h4 style="color: #fff; font-size: 1.1rem; margin-bottom: 0.35rem;">No se encontraron miembros del cuerpo técnico</h4>
+        <p style="color: var(--abc-silver-muted); font-size: 0.85rem;">Prueba ajustando los filtros de búsqueda o registra un nuevo integrante.</p>
+      </div>
+    `;
+    return;
+  }
+
+  const isAdmin = !!state.isAdmin;
+
+  container.innerHTML = filtered.map(s => {
+    const roleClass = getRoleBadgeClass(s.rol);
+    const cleanPhone = (s.telefono || '').replace(/\D/g, '');
+    const waUrl = cleanPhone ? `https://wa.me/58${cleanPhone.startsWith('0') ? cleanPhone.slice(1) : cleanPhone}` : '#';
+    const telUrl = s.telefono ? `tel:${s.telefono}` : '#';
+    const photoUrl = s.foto || DEFAULT_COACH_AVATAR;
+
+    // Categorías en chips
+    const catList = (s.categorias || 'Todas las Categorías')
+      .split(',')
+      .map(c => c.trim())
+      .filter(Boolean);
+
+    const catChipsHtml = catList.map(c => `<span class="staff-cat-chip">${c}</span>`).join('');
+
+    const adminActionsHtml = isAdmin ? `
+      <div class="staff-admin-actions">
+        <button class="btn-icon-action edit" onclick="openEditStaffModal('${s.id}')" title="Editar miembro técnico">✏️</button>
+        <button class="btn-icon-action delete" onclick="handleDeleteStaff('${s.id}')" title="Eliminar miembro técnico">🗑️</button>
+      </div>
+    ` : `
+      <div class="staff-admin-actions" style="opacity: 0.7;">
+        <button class="btn-icon-action" onclick="openAdminAuthModal(() => openEditStaffModal('${s.id}'))" title="Desbloquear Directiva para editar">🔒</button>
+      </div>
+    `;
+
+    return `
+      <div class="staff-card">
+        <div class="staff-card-header">
+          <div class="staff-card-brand">
+            <span class="staff-id-tag">${s.id}</span>
+            <span class="staff-status-dot ${s.estatus === 'Activo' ? 'active' : ''}" title="Estatus: ${s.estatus}"></span>
+          </div>
+          ${adminActionsHtml}
+        </div>
+
+        <div class="staff-card-body">
+          <div class="staff-avatar-wrap">
+            <img src="${photoUrl}" class="staff-avatar-img" alt="${s.nombres} ${s.apellidos}" onerror="this.src='${DEFAULT_COACH_AVATAR}'" />
+            <span class="staff-role-badge ${roleClass}">${s.rol}</span>
+          </div>
+
+          <h3 class="staff-name">${s.nombres} ${s.apellidos}</h3>
+          
+          <div class="staff-meta-row">
+            <span class="staff-meta-item">🪪 ${s.cedula}</span>
+            ${s.email ? `<span class="staff-meta-item">✉️ ${s.email}</span>` : ''}
+          </div>
+
+          <div class="staff-categories-box">
+            <div class="staff-box-label">Categorías que atiende:</div>
+            <div class="staff-chips-row">${catChipsHtml}</div>
+          </div>
+
+          ${s.experiencia ? `
+            <div class="staff-exp-box">
+              <span class="staff-exp-icon">🎖️</span>
+              <p class="staff-exp-text">${s.experiencia}</p>
+            </div>
+          ` : ''}
+
+          <div class="staff-card-footer">
+            <div class="staff-phone-text">
+              <span>📞</span> ${s.telefono}
+            </div>
+            <div class="staff-contact-btns">
+              <a href="${waUrl}" target="_blank" class="btn-quick-wa" title="Escribir por WhatsApp">💬</a>
+              <a href="${telUrl}" class="btn-quick-call" title="Llamar por teléfono">📞</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function initStaffCategoryChips() {
+  const container = document.getElementById('staffCategoryChips');
+  if (!container) return;
+
+  container.querySelectorAll('.staff-cat-chip-select').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const cat = chip.dataset.cat;
+      if (cat === 'Todas las Categorías') {
+        const isSelected = chip.classList.contains('selected');
+        container.querySelectorAll('.staff-cat-chip-select').forEach(c => c.classList.remove('selected'));
+        if (!isSelected) chip.classList.add('selected');
+      } else {
+        const todasChip = container.querySelector('[data-cat="Todas las Categorías"]');
+        if (todasChip) todasChip.classList.remove('selected');
+        chip.classList.toggle('selected');
+      }
+      updateStaffSelectedCategories();
+    });
+  });
+}
+
+function updateStaffSelectedCategories() {
+  const container = document.getElementById('staffCategoryChips');
+  const hiddenInput = document.getElementById('staffCategoriasValue');
+  if (!container || !hiddenInput) return;
+
+  const selected = Array.from(container.querySelectorAll('.staff-cat-chip-select.selected'))
+    .map(c => c.dataset.cat);
+
+  hiddenInput.value = selected.join(', ');
+}
+
+function setStaffSelectedCategories(categoriesStr) {
+  const container = document.getElementById('staffCategoryChips');
+  const hiddenInput = document.getElementById('staffCategoriasValue');
+  if (!container || !hiddenInput) return;
+
+  container.querySelectorAll('.staff-cat-chip-select').forEach(c => c.classList.remove('selected'));
+
+  if (!categoriesStr) {
+    hiddenInput.value = '';
+    return;
+  }
+
+  const list = categoriesStr.split(',').map(s => s.trim().toLowerCase());
+  container.querySelectorAll('.staff-cat-chip-select').forEach(chip => {
+    const cat = chip.dataset.cat.toLowerCase();
+    if (list.includes(cat) || (cat === 'todas las categorías' && list.includes('todas'))) {
+      chip.classList.add('selected');
+    }
+  });
+
+  hiddenInput.value = categoriesStr;
+}
+
+// Setup Staff Photo Uploader (Native file picker + Base64 compression & immediate preview)
+function setupStaffPhotoUploader() {
+  const fileInput = document.getElementById('staffFotoInput');
+  const previewImg = document.getElementById('staffPhotoPreviewImg');
+  const placeholderIcon = document.getElementById('staffPhotoPlaceholderIcon');
+  const removeBtn = document.getElementById('btnRemoveStaffPhoto');
+  const statusText = document.getElementById('staffPhotoStatusText');
+  const hiddenInput = document.getElementById('staffFotoData');
+
+  if (!fileInput) return;
+
+  fileInput.addEventListener('change', (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      showToast('⚠️ Por favor seleccione una imagen válida (JPG, PNG, WebP)');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        // Redimensionar máx 500x500 para Base64 compacto y de alta calidad
+        const maxDim = 500;
+        let width = img.width;
+        let height = img.height;
+        if (width > height && width > maxDim) {
+          height = Math.round((height * maxDim) / width);
+          width = maxDim;
+        } else if (height > maxDim) {
+          width = Math.round((width * maxDim) / height);
+          height = maxDim;
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.82);
+        state.activeStaffPhotoData = compressedBase64;
+        if (hiddenInput) hiddenInput.value = compressedBase64;
+
+        if (previewImg) {
+          previewImg.src = compressedBase64;
+          previewImg.style.display = 'block';
+        }
+        if (placeholderIcon) placeholderIcon.style.display = 'none';
+        if (removeBtn) removeBtn.style.display = 'inline-flex';
+        if (statusText) statusText.innerText = 'Foto optimizada ✓';
+
+        showToast('📸 Fotografía procesada y lista');
+      };
+      img.onerror = () => {
+        showToast('⚠️ Error al decodificar la imagen seleccionada');
+      };
+      img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+window.removeStaffPhoto = function() {
+  state.activeStaffPhotoData = '';
+  const hiddenInput = document.getElementById('staffFotoData');
+  const fileInput = document.getElementById('staffFotoInput');
+  const previewImg = document.getElementById('staffPhotoPreviewImg');
+  const placeholderIcon = document.getElementById('staffPhotoPlaceholderIcon');
+  const removeBtn = document.getElementById('btnRemoveStaffPhoto');
+  const statusText = document.getElementById('staffPhotoStatusText');
+
+  if (hiddenInput) hiddenInput.value = '';
+  if (fileInput) fileInput.value = '';
+  if (previewImg) {
+    previewImg.src = '';
+    previewImg.style.display = 'none';
+  }
+  if (placeholderIcon) placeholderIcon.style.display = 'flex';
+  if (removeBtn) removeBtn.style.display = 'none';
+  if (statusText) statusText.innerText = 'JPG / PNG o Cámara';
+};
+
+window.openNewStaffModal = function() {
+  state.editingStaffId = null;
+  state.activeStaffPhotoData = '';
+  const form = document.getElementById('staffMemberForm');
+  if (form) form.reset();
+
+  const editIdInput = document.getElementById('staffEditId');
+  if (editIdInput) editIdInput.value = '';
+
+  const title = document.getElementById('staffModalTitle');
+  if (title) title.innerText = 'Registrar Miembro del Cuerpo Técnico';
+
+  removeStaffPhoto();
+  setStaffSelectedCategories('');
+
+  const modal = document.getElementById('modalStaffMember');
+  if (modal) modal.classList.add('active');
+};
+
+window.openEditStaffModal = function(staffId) {
+  const staff = (state.staff || []).find(s => s.id === staffId);
+  if (!staff) return;
+
+  state.editingStaffId = staffId;
+  const editIdInput = document.getElementById('staffEditId');
+  if (editIdInput) editIdInput.value = staff.id;
+
+  const title = document.getElementById('staffModalTitle');
+  if (title) title.innerText = `Editar Miembro Técnico: ${staff.nombres} ${staff.apellidos}`;
+
+  const setVal = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.value = val || '';
+  };
+
+  setVal('staffNombres', staff.nombres);
+  setVal('staffApellidos', staff.apellidos);
+  setVal('staffCedula', staff.cedula);
+  setVal('staffTelefono', staff.telefono);
+  setVal('staffEmail', staff.email);
+  setVal('staffRol', staff.rol);
+  setVal('staffEstatus', staff.estatus);
+  setVal('staffExperiencia', staff.experiencia);
+
+  // Cargar foto existente en la vista previa
+  const previewImg = document.getElementById('staffPhotoPreviewImg');
+  const placeholderIcon = document.getElementById('staffPhotoPlaceholderIcon');
+  const removeBtn = document.getElementById('btnRemoveStaffPhoto');
+  const statusText = document.getElementById('staffPhotoStatusText');
+  const hiddenInput = document.getElementById('staffFotoData');
+
+  if (staff.foto && staff.foto.trim() !== '') {
+    state.activeStaffPhotoData = staff.foto;
+    if (hiddenInput) hiddenInput.value = staff.foto;
+    if (previewImg) {
+      previewImg.src = staff.foto;
+      previewImg.style.display = 'block';
+    }
+    if (placeholderIcon) placeholderIcon.style.display = 'none';
+    if (removeBtn) removeBtn.style.display = 'inline-flex';
+    if (statusText) statusText.innerText = 'Foto actual cargada';
+  } else {
+    removeStaffPhoto();
+  }
+
+  setStaffSelectedCategories(staff.categorias || '');
+
+  const modal = document.getElementById('modalStaffMember');
+  if (modal) modal.classList.add('active');
+};
+
+window.handleStaffFormSubmit = async function(e) {
+  e.preventDefault();
+
+  const editId = (document.getElementById('staffEditId')?.value || '').trim();
+  const nombres = (document.getElementById('staffNombres')?.value || '').trim();
+  const apellidos = (document.getElementById('staffApellidos')?.value || '').trim();
+  const cedula = (document.getElementById('staffCedula')?.value || '').trim();
+  const telefono = (document.getElementById('staffTelefono')?.value || '').trim();
+  const email = (document.getElementById('staffEmail')?.value || '').trim();
+  const rol = (document.getElementById('staffRol')?.value || 'Entrenador Asistente').trim();
+  const estatus = (document.getElementById('staffEstatus')?.value || 'Activo').trim();
+  const experiencia = (document.getElementById('staffExperiencia')?.value || '').trim();
+  const foto = (state.activeStaffPhotoData || document.getElementById('staffFotoData')?.value || '').trim();
+  
+  let categorias = (document.getElementById('staffCategoriasValue')?.value || '').trim();
+  if (!categorias) {
+    categorias = 'Todas las Categorías';
+  }
+
+  const staffData = {
+    nombres,
+    apellidos,
+    cedula,
+    telefono,
+    email,
+    rol,
+    estatus,
+    categorias,
+    experiencia,
+    foto: foto || DEFAULT_COACH_AVATAR
+  };
+
+  if (editId) {
+    staffData.id = editId;
+    if (window.ABCSupabase) {
+      await window.ABCSupabase.updateStaffMember(editId, staffData);
+    }
+    const idx = (state.staff || []).findIndex(s => s.id === editId);
+    if (idx !== -1) state.staff[idx] = { ...state.staff[idx], ...staffData };
+    showToast('✅ Miembro del cuerpo técnico actualizado con éxito');
+  } else {
+    let result = null;
+    if (window.ABCSupabase) {
+      result = await window.ABCSupabase.saveStaffMember(staffData);
+      if (result && result.data) {
+        state.staff.push(result.data);
+      } else {
+        state.staff.push(staffData);
+      }
+    } else {
+      staffData.id = `CT-${String((state.staff || []).length + 1).padStart(3, '0')}`;
+      state.staff.push(staffData);
+      localStorage.setItem('ABC_CARIPITO_STAFF_DB_V1', JSON.stringify(state.staff));
+    }
+    showToast('🎉 Nuevo miembro del cuerpo técnico registrado exitosamente');
+  }
+
+  closeAllModals();
+  updateStaffKPIs();
+  renderStaffGrid();
+};
+
+window.handleDeleteStaff = async function(staffId) {
+  if (!state.isAdmin) {
+    openAdminAuthModal(() => handleDeleteStaff(staffId));
+    return;
+  }
+
+  const staff = (state.staff || []).find(s => s.id === staffId);
+  const name = staff ? `${staff.nombres} ${staff.apellidos}` : staffId;
+
+  if (!confirm(`¿Está seguro de que desea eliminar a "${name}" del cuerpo técnico?`)) {
+    return;
+  }
+
+  if (window.ABCSupabase) {
+    await window.ABCSupabase.deleteStaffMember(staffId);
+  }
+  state.staff = (state.staff || []).filter(s => s.id !== staffId);
+  showToast(`🗑️ ${name} ha sido eliminado del cuerpo técnico`);
+  updateStaffKPIs();
+  renderStaffGrid();
+};
+

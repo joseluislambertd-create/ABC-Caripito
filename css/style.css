@@ -356,6 +356,27 @@ body::before {
   gap: 0.5rem;
 }
 
+/* Guardas de visibilidad estrictas: evitar superposiciones entre estados */
+body.rep-mode-active #adminActiveBadge,
+body:not(.admin-mode-active) #adminActiveBadge,
+#adminActiveBadge[style*="display: none"],
+#adminActiveBadge[style*="display:none"] {
+  display: none !important;
+}
+
+body.admin-mode-active #btnOpenAdminAuth,
+#btnOpenAdminAuth[style*="display: none"],
+#btnOpenAdminAuth[style*="display:none"] {
+  display: none !important;
+}
+
+body.admin-mode-active #repModeBadge,
+#repModeBadge[style*="display: none"],
+#repModeBadge[style*="display:none"] {
+  display: none !important;
+}
+
+
 .btn-admin-auth {
   display: inline-flex;
   align-items: center;
@@ -2452,29 +2473,36 @@ body::before {
     line-height: 1.2;
   }
 
-  /* Header Actions Bar (3 columnas: laterales compactas, centro prioritario) */
-  .header-actions {
-    width: 100% !important;
-    display: grid !important;
-    grid-template-columns: auto 1fr auto !important;
-    gap: 0.3rem !important;
-    box-sizing: border-box !important;
-    align-items: center !important;
+  .nav-tab-btn:last-child:nth-child(odd) {
+    grid-column: span 2;
   }
 
-  /* Columna 1: Indicador Nube — compacto como badge/icono */
+
+  /* Header Actions Bar (Móvil: 3 elementos lógicos limpios y compactos sin desbordamiento) */
+  .header-actions {
+    width: 100% !important;
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 0.35rem !important;
+    box-sizing: border-box !important;
+    padding: 0 !important;
+  }
+
+  /* 1. Indicador Nube: Badge compacto a la izquierda */
   .cloud-status-badge {
+    flex: 0 0 auto !important;
     width: auto !important;
     min-width: 0 !important;
-    height: auto !important;
-    min-height: 40px !important;
+    min-height: 32px !important;
     display: inline-flex !important;
     flex-direction: row !important;
     align-items: center !important;
     justify-content: center !important;
-    text-align: center !important;
-    padding: 0.3rem 0.5rem !important;
-    border-radius: 10px !important;
+    padding: 0.22rem 0.5rem !important;
+    border-radius: 8px !important;
     box-sizing: border-box !important;
     border: 1.5px solid rgba(148, 163, 184, 0.4) !important;
     gap: 0.25rem !important;
@@ -2496,13 +2524,11 @@ body::before {
     line-height: 1.15 !important;
     margin-top: 0 !important;
     white-space: nowrap !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8) !important;
   }
 
   .cloud-status-badge .cloud-icon {
-    font-size: 0.9rem !important;
+    font-size: 0.85rem !important;
     line-height: 1 !important;
   }
 
@@ -2510,88 +2536,98 @@ body::before {
     position: absolute !important;
     top: -2px !important;
     right: -4px !important;
-    width: 6px !important;
-    height: 6px !important;
+    width: 5px !important;
+    height: 5px !important;
   }
 
-  /* Columna 2: Auth Role Group — espacio prioritario y amplio */
+  /* 2. Centro: Contenedor de Directiva / Sesión Activa */
   .auth-role-group {
-    width: 100% !important;
+    flex: 1 1 auto !important;
     min-width: 0 !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
     box-sizing: border-box !important;
+    padding: 0 !important;
+    margin: 0 !important;
   }
 
+  /* Ocultar badge secundario 'Consulta' en móvil para dar espacio prioritario a Directiva / Salir */
+  .rep-mode-badge,
+  #repModeBadge {
+    display: none !important;
+  }
+
+  /* Botón Directiva (Acceso / Desbloqueo) */
   .btn-admin-auth {
-    width: 100% !important;
+    width: auto !important;
+    max-width: 100% !important;
     min-width: 0 !important;
-    min-height: 40px !important;
-    display: flex !important;
+    min-height: 32px !important;
+    display: inline-flex !important;
     flex-direction: row !important;
     align-items: center !important;
     justify-content: center !important;
     text-align: center !important;
-    padding: 0.35rem 0.6rem !important;
-    border-radius: 10px !important;
-    font-size: 0.82rem !important;
+    padding: 0.22rem 0.65rem !important;
+    border-radius: 8px !important;
+    font-size: 0.72rem !important; /* ~11px / text-xs */
     font-weight: 600 !important;
     color: #ffffff !important;
     text-transform: capitalize !important;
     line-height: 1.15 !important;
     box-sizing: border-box !important;
-    gap: 0.3rem !important;
+    gap: 0.25rem !important;
     border: 1.5px solid rgba(255, 107, 0, 0.6) !important;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8) !important;
     white-space: nowrap !important;
   }
 
   .btn-admin-auth .auth-icon {
-    font-size: 0.95rem !important;
+    font-size: 0.85rem !important;
     line-height: 1 !important;
     flex-shrink: 0 !important;
   }
 
   .btn-admin-auth .auth-text {
-    font-size: 0.82rem !important;
+    font-size: 0.72rem !important;
     margin-top: 0 !important;
     white-space: nowrap !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
   }
 
+  /* Badge Directiva Activa con Salir unificado en una sola pastilla limpia */
   .admin-active-badge {
-    width: 100% !important;
+    width: auto !important;
+    max-width: 100% !important;
     min-width: 0 !important;
-    min-height: 40px !important;
-    display: flex !important;
+    min-height: 32px !important;
+    display: inline-flex !important;
     flex-direction: row !important;
     align-items: center !important;
     justify-content: center !important;
     text-align: center !important;
-    padding: 0.3rem 0.5rem !important;
-    border-radius: 10px !important;
-    font-size: 0.8rem !important;
+    padding: 0.2rem 0.5rem !important;
+    border-radius: 8px !important;
+    font-size: 0.72rem !important;
     font-weight: 600 !important;
     color: #ffffff !important;
     text-transform: capitalize !important;
     line-height: 1.15 !important;
     box-sizing: border-box !important;
-    gap: 0.3rem !important;
+    gap: 0.25rem !important;
     border: 1.5px solid #10b981 !important;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8) !important;
     white-space: nowrap !important;
   }
 
   .admin-active-badge .shield-icon {
-    font-size: 0.9rem !important;
+    font-size: 0.85rem !important;
     line-height: 1 !important;
     flex-shrink: 0 !important;
   }
 
   .admin-active-badge .admin-title-text {
-    font-size: 0.78rem !important;
+    font-size: 0.72rem !important;
     line-height: 1 !important;
     margin-top: 0 !important;
     white-space: nowrap !important;
@@ -2599,63 +2635,33 @@ body::before {
 
   .admin-active-badge .btn-admin-logout {
     padding: 0.15rem 0.4rem !important;
-    font-size: 0.7rem !important;
+    font-size: 0.68rem !important; /* ~10px */
+    font-weight: 700 !important;
     margin-top: 0 !important;
-    margin-left: 0.15rem !important;
-    border-radius: 5px !important;
+    margin-left: 0.25rem !important;
+    border-radius: 4px !important;
     flex-shrink: 0 !important;
-  }
-
-  .rep-mode-badge {
-    width: 100% !important;
-    min-width: 0 !important;
-    min-height: 40px !important;
-    display: flex !important;
-    flex-direction: row !important;
-    align-items: center !important;
-    justify-content: center !important;
-    text-align: center !important;
-    padding: 0.35rem 0.6rem !important;
-    border-radius: 10px !important;
-    font-size: 0.82rem !important;
-    font-weight: 600 !important;
+    line-height: 1.1 !important;
+    background: rgba(239, 68, 68, 0.45) !important;
+    border: 1px solid rgba(239, 68, 68, 0.85) !important;
     color: #ffffff !important;
-    text-transform: capitalize !important;
-    line-height: 1.15 !important;
-    box-sizing: border-box !important;
-    gap: 0.3rem !important;
-    border: 1.5px solid rgba(0, 210, 255, 0.6) !important;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8) !important;
-    white-space: nowrap !important;
+    cursor: pointer !important;
   }
 
-  .rep-mode-badge .rep-icon {
-    font-size: 0.95rem !important;
-    line-height: 1 !important;
-    flex-shrink: 0 !important;
-  }
-
-  .rep-mode-badge .rep-text {
-    font-size: 0.82rem !important;
-    margin-top: 0 !important;
-    white-space: nowrap !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-  }
-
-  /* Columna 3: Link Representante — compacto como badge */
+  /* 3. Derecha: Link Representante */
   .btn-share-link {
+    flex: 0 0 auto !important;
     width: auto !important;
     min-width: 0 !important;
-    min-height: 40px !important;
+    min-height: 32px !important;
     display: inline-flex !important;
     flex-direction: row !important;
     align-items: center !important;
     justify-content: center !important;
     text-align: center !important;
-    padding: 0.3rem 0.5rem !important;
-    border-radius: 10px !important;
-    font-size: 10px !important;
+    padding: 0.22rem 0.5rem !important;
+    border-radius: 8px !important;
+    font-size: 0.72rem !important;
     font-weight: 600 !important;
     color: #ffffff !important;
     text-transform: capitalize !important;
@@ -2668,17 +2674,15 @@ body::before {
   }
 
   .btn-share-link .share-icon {
-    font-size: 0.9rem !important;
+    font-size: 0.85rem !important;
     line-height: 1 !important;
     flex-shrink: 0 !important;
   }
 
   .btn-share-link .share-text {
-    font-size: 10px !important;
+    font-size: 0.72rem !important;
     margin-top: 0 !important;
     white-space: nowrap !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
   }
 
   /* Stats Banner Mobile */
@@ -3324,31 +3328,28 @@ body::before {
   }
 
   .header-actions {
-    gap: 0.2rem !important;
+    gap: 0.25rem !important;
   }
 
   .cloud-status-badge,
   .btn-share-link {
-    min-height: 36px !important;
-    padding: 0.25rem 0.35rem !important;
-    font-size: 9px !important;
+    min-height: 30px !important;
+    padding: 0.2rem 0.4rem !important;
   }
 
   .btn-admin-auth,
-  .admin-active-badge,
-  .rep-mode-badge {
-    min-height: 36px !important;
-    padding: 0.3rem 0.4rem !important;
+  .admin-active-badge {
+    min-height: 30px !important;
+    padding: 0.2rem 0.5rem !important;
   }
 
   .cloud-status-badge .cloud-label,
   .btn-share-link .share-text {
-    font-size: 9px !important;
+    font-size: 9.5px !important;
   }
 
-  .btn-admin-auth .auth-text,
-  .rep-mode-badge .rep-text {
-    font-size: 0.75rem !important;
+  .btn-admin-auth .auth-text {
+    font-size: 0.7rem !important;
   }
 
   .admin-active-badge .admin-title-text {
@@ -3356,8 +3357,8 @@ body::before {
   }
 
   .btn-admin-logout {
-    padding: 0.1rem 0.3rem !important;
-    font-size: 0.6rem !important;
+    padding: 0.12rem 0.35rem !important;
+    font-size: 0.65rem !important;
   }
 
   /* Ficha en pantallas ultra estrechas */
@@ -3414,6 +3415,535 @@ body:not(.admin-mode-active) .admin-only {
   background: rgba(244, 114, 182, 0.15);
   color: #f472b6;
   border: 1px solid rgba(244, 114, 182, 0.45);
+}
+
+/* ==========================================================================
+   VISTA 5: CUERPO TÉCNICO & STAFF
+   ========================================================================== */
+.staff-hero-banner {
+  background: linear-gradient(135deg, rgba(8, 21, 52, 0.95), rgba(15, 23, 42, 0.98));
+  border: 1.5px solid rgba(0, 210, 255, 0.3);
+  border-radius: var(--radius-xl);
+  padding: 1.75rem 2rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 25px rgba(0, 210, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  margin-bottom: 0.5rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.staff-hero-banner::before {
+  content: '';
+  position: absolute;
+  top: -40px;
+  right: -40px;
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 107, 0, 0.25) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.staff-hero-info {
+  flex: 1;
+  min-width: 280px;
+}
+
+.staff-hero-title {
+  font-family: var(--font-heading);
+  font-size: 1.75rem;
+  font-weight: 900;
+  color: #ffffff;
+  margin: 0.35rem 0 0.5rem;
+  letter-spacing: -0.3px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+.staff-hero-subtitle {
+  color: var(--abc-silver-muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  margin: 0;
+  max-width: 650px;
+}
+
+.staff-kpi-group {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.staff-kpi-chip {
+  background: rgba(10, 17, 36, 0.85);
+  border: 1.5px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-md);
+  padding: 0.65rem 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 95px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.staff-kpi-chip:hover {
+  transform: translateY(-2px);
+  border-color: var(--abc-cyan-bright);
+}
+
+.staff-kpi-val {
+  font-family: var(--font-heading);
+  font-size: 1.5rem;
+  font-weight: 900;
+  color: var(--abc-cyan-bright);
+  line-height: 1.1;
+}
+
+.staff-kpi-chip:nth-child(2) .staff-kpi-val {
+  color: var(--abc-orange-bright);
+}
+
+.staff-kpi-chip:nth-child(3) .staff-kpi-val {
+  color: #38bdf8;
+}
+
+.staff-kpi-chip:nth-child(4) .staff-kpi-val {
+  color: #34d399;
+}
+
+.staff-kpi-lbl {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--abc-silver-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  margin-top: 0.15rem;
+  white-space: nowrap;
+}
+
+/* Grid de Tarjetas del Cuerpo Técnico */
+.staff-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1rem;
+}
+
+.staff-card {
+  background: linear-gradient(165deg, rgba(14, 23, 48, 0.95) 0%, rgba(8, 13, 30, 0.98) 100%);
+  border: 1.5px solid rgba(255, 255, 255, 0.1);
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.staff-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.7), 0 0 25px rgba(0, 210, 255, 0.15);
+  border-color: rgba(0, 210, 255, 0.4);
+}
+
+.staff-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1.25rem;
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.staff-card-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.staff-id-tag {
+  font-family: monospace;
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: var(--abc-cyan-bright);
+  background: rgba(0, 210, 255, 0.12);
+  border: 1px solid rgba(0, 210, 255, 0.3);
+  padding: 0.15rem 0.5rem;
+  border-radius: 6px;
+  letter-spacing: 0.5px;
+}
+
+.staff-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #64748b;
+  display: inline-block;
+}
+
+.staff-status-dot.active {
+  background: #10b981;
+  box-shadow: 0 0 8px #10b981;
+}
+
+.staff-admin-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.staff-card-body {
+  padding: 1.5rem 1.25rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  flex: 1;
+}
+
+.staff-avatar-wrap {
+  position: relative;
+  margin-bottom: 0.85rem;
+}
+
+.staff-avatar-img {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid var(--abc-orange-bright);
+  box-shadow: 0 0 20px rgba(255, 107, 0, 0.35);
+  background: #0f172a;
+}
+
+.staff-role-badge {
+  position: absolute;
+  bottom: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 0.22rem 0.75rem;
+  border-radius: var(--radius-full);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  line-height: 1;
+  border: 1.5px solid #ffffff;
+}
+
+.staff-role-badge.principal {
+  background: linear-gradient(135deg, #ff6b00, #ea580c);
+  color: #ffffff;
+  box-shadow: 0 3px 12px rgba(255, 107, 0, 0.6);
+}
+
+.staff-role-badge.asistente {
+  background: linear-gradient(135deg, #0284c7, #0369a1);
+  color: #ffffff;
+  box-shadow: 0 3px 12px rgba(2, 132, 199, 0.6);
+}
+
+.staff-role-badge.fisico {
+  background: linear-gradient(135deg, #059669, #047857);
+  color: #ffffff;
+  box-shadow: 0 3px 12px rgba(5, 150, 105, 0.6);
+}
+
+.staff-role-badge.delegado {
+  background: linear-gradient(135deg, #7c3aed, #6d28d9);
+  color: #ffffff;
+  box-shadow: 0 3px 12px rgba(124, 58, 237, 0.6);
+}
+
+.staff-role-badge.fisio {
+  background: linear-gradient(135deg, #db2777, #be185d);
+  color: #ffffff;
+}
+
+.staff-role-badge.general {
+  background: rgba(100, 116, 139, 0.4);
+  color: #e2e8f0;
+}
+
+.staff-name {
+  font-family: var(--font-heading);
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0.2rem 0 0.15rem;
+  line-height: 1.2;
+}
+
+.staff-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  font-size: 0.78rem;
+  color: var(--abc-silver-muted);
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.staff-meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.staff-categories-box {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  padding: 0.65rem 0.75rem;
+  margin: 0.4rem 0;
+}
+
+.staff-box-label {
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--abc-silver-muted);
+  margin-bottom: 0.35rem;
+  letter-spacing: 0.3px;
+}
+
+.staff-chips-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  justify-content: center;
+}
+
+.staff-cat-chip {
+  background: rgba(0, 210, 255, 0.12);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.18rem 0.55rem;
+  border-radius: 6px;
+}
+
+.staff-exp-box {
+  width: 100%;
+  background: rgba(255, 107, 0, 0.06);
+  border: 1px solid rgba(255, 107, 0, 0.2);
+  border-radius: 10px;
+  padding: 0.65rem 0.85rem;
+  text-align: left;
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+  margin: 0.4rem 0 0.8rem;
+}
+
+.staff-exp-icon {
+  font-size: 1rem;
+  line-height: 1.2;
+}
+
+.staff-exp-text {
+  font-size: 0.75rem;
+  color: #f1f5f9;
+  line-height: 1.4;
+  margin: 0;
+  font-weight: 500;
+}
+
+.staff-card-footer {
+  width: 100%;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 0.85rem;
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.staff-phone-text {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.staff-contact-btns {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+/* Category Chips Selector in Modal */
+.staff-cat-chips-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.4rem;
+}
+
+.staff-cat-chip-select {
+  background: rgba(15, 23, 42, 0.75);
+  border: 1.5px solid rgba(148, 163, 184, 0.35);
+  color: #cbd5e1;
+  padding: 0.35rem 0.85rem;
+  border-radius: var(--radius-full);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.2s ease;
+}
+
+.staff-cat-chip-select:hover {
+  border-color: var(--abc-cyan-bright);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.staff-cat-chip-select.selected {
+  background: linear-gradient(135deg, var(--abc-orange-bright), #e65100);
+  border-color: #ffffff;
+  color: #ffffff;
+  box-shadow: 0 0 12px rgba(255, 107, 0, 0.5);
+}
+
+/* Modal Staff Photo Avatar Uploader */
+.staff-photo-avatar-uploader {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
+  cursor: pointer;
+  border-radius: 16px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.staff-photo-avatar-uploader:hover {
+  transform: scale(1.05);
+}
+
+.staff-photo-avatar-uploader .modal-header-icon-wrap {
+  width: 100%;
+  height: 100%;
+  border-radius: 16px;
+  transition: all 0.2s ease;
+}
+
+.staff-photo-avatar-uploader:hover .modal-header-icon-wrap {
+  border-color: var(--abc-cyan-bright);
+  box-shadow: 0 0 15px rgba(0, 210, 255, 0.4);
+}
+
+.staff-photo-avatar-uploader img {
+  width: 100%;
+  height: 100%;
+  border-radius: 16px;
+  object-fit: cover;
+  border: 2px solid var(--abc-cyan-bright);
+  box-shadow: 0 4px 14px rgba(0, 210, 255, 0.35);
+  display: block;
+}
+
+.staff-photo-camera-badge {
+  position: absolute;
+  bottom: -3px;
+  right: -3px;
+  width: 22px;
+  height: 22px;
+  background: var(--abc-cyan-bright);
+  color: #060b14;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  border: 2px solid #0c1222;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+  transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+.staff-photo-avatar-uploader:hover .staff-photo-camera-badge {
+  transform: scale(1.18);
+  background: #ffffff;
+}
+
+.btn-staff-upload-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: rgba(0, 210, 255, 0.12);
+  color: var(--abc-cyan-bright);
+  border: 1px solid rgba(0, 210, 255, 0.35);
+  padding: 0.28rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-staff-upload-chip:hover {
+  background: rgba(0, 210, 255, 0.25);
+  border-color: var(--abc-cyan-bright);
+  transform: translateY(-1px);
+}
+
+.btn-staff-remove-photo {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(239, 68, 68, 0.12);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  padding: 0.28rem 0.65rem;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-staff-remove-photo:hover {
+  background: rgba(239, 68, 68, 0.25);
+}
+
+@media (max-width: 768px) {
+  .staff-hero-banner {
+    padding: 1.25rem 1rem;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .staff-hero-title {
+    font-size: 1.4rem;
+  }
+
+  .staff-kpi-group {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    width: 100%;
+  }
+
+  .staff-kpi-chip {
+    min-width: 0;
+    width: 100%;
+    padding: 0.5rem 0.6rem;
+  }
+
+  .staff-cards-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* ==========================================================================
